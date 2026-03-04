@@ -18,7 +18,8 @@ import {
     Settings01Icon,
     ArrowDown01Icon,
     UserIcon,
-    LogoutCircle02Icon
+    LogoutCircle02Icon,
+    Delete02Icon
 } from "@hugeicons/core-free-icons";
 
 const Navbar = () => {
@@ -33,7 +34,7 @@ const Navbar = () => {
     const [profile, setProfile] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
     const { unreadCount: chatUnreadCount } = useChatConfig();
-    const { unreadCount: notificationUnreadCount, notifications, markAsRead, markAllAsRead } = useNotifications();
+    const { unreadCount: notificationUnreadCount, notifications, markAsRead, markAllAsRead, deleteNotification, clearAllNotifications } = useNotifications();
 
     const triggerSearch = () => {
         if (searchQuery.trim()) {
@@ -277,14 +278,24 @@ const Navbar = () => {
                             <div className="absolute right-0 mt-3 w-80 bg-white rounded-3xl shadow-xl shadow-black/10 border border-gray-100 py-3 z-50 overflow-hidden flex flex-col max-h-[450px]">
                                 <div className="px-5 mb-2 flex items-center justify-between">
                                     <h3 className="font-black text-gray-900 text-lg">Notifications</h3>
-                                    {notificationUnreadCount > 0 && (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); markAllAsRead(); }}
-                                            className="text-[12px] font-bold text-[#ffc107] hover:text-[#e09e00] transition-colors"
-                                        >
-                                            Mark all read
-                                        </button>
-                                    )}
+                                    <div className="flex gap-3">
+                                        {notifications.length > 0 && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); if (window.confirm("Clear all notifications?")) clearAllNotifications(); }}
+                                                className="text-[12px] font-bold text-red-500 hover:text-red-600 transition-colors"
+                                            >
+                                                Clear all
+                                            </button>
+                                        )}
+                                        {notificationUnreadCount > 0 && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); markAllAsRead(); }}
+                                                className="text-[12px] font-bold text-[#ffc107] hover:text-[#e09e00] transition-colors"
+                                            >
+                                                Mark all read
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="overflow-y-auto flex-1 px-2 custom-scrollbar">
                                     {notifications.length === 0 ? (
@@ -293,7 +304,7 @@ const Navbar = () => {
                                         <div
                                             key={notif.id}
                                             onClick={() => handleNotificationClick(notif)}
-                                            className={`flex items-center gap-4 p-3 rounded-2xl cursor-pointer transition-colors mb-1 ${notif.is_read ? 'hover:bg-gray-50' : 'bg-[#ffc107]/5 border border-[#ffc107]/20 hover:bg-[#ffc107]/10'}`}
+                                            className={`flex items-center gap-4 p-3 rounded-2xl cursor-pointer transition-colors mb-1 group ${notif.is_read ? 'hover:bg-gray-50' : 'bg-[#ffc107]/5 border border-[#ffc107]/20 hover:bg-[#ffc107]/10'}`}
                                         >
                                             <div className="shrink-0">
                                                 <Avatar
@@ -303,10 +314,18 @@ const Navbar = () => {
                                                 />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-[13px] font-bold text-gray-900 truncate">
-                                                    {notif.actor?.computedName || "Someone"}
-                                                </p>
-                                                <p className={`text-[12px] truncate ${notif.is_read ? 'font-medium text-gray-600' : 'font-bold text-gray-900'}`}>
+                                                <div className="flex justify-between items-start gap-2">
+                                                    <p className="text-[13px] font-bold text-gray-900 truncate">
+                                                        {notif.actor?.computedName || "Someone"}
+                                                    </p>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
+                                                        className="p-1 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                                    >
+                                                        <HugeiconsIcon icon={Delete02Icon} size={14} />
+                                                    </button>
+                                                </div>
+                                                <p className={`text-[12px] mt-0.5 ${notif.is_read ? 'font-medium text-gray-600' : 'font-bold text-gray-900'}`}>
                                                     {notif.message || getActionText(notif.type)}
                                                 </p>
                                             </div>

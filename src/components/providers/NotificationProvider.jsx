@@ -9,7 +9,9 @@ const NotificationContext = createContext({
     notifications: [],
     loading: true,
     markAsRead: async () => { },
-    markAllAsRead: async () => { }
+    markAllAsRead: async () => { },
+    deleteNotification: async () => { },
+    clearAllNotifications: async () => { }
 });
 
 export const useNotifications = () => useContext(NotificationContext);
@@ -152,13 +154,52 @@ export default function NotificationProvider({ children }) {
         }
     };
 
+    const deleteNotification = async (notificationId) => {
+        // Optimistic UI update
+        const notificationToDelete = notifications.find(n => n.id === notificationId);
+        setNotifications(prev => prev.filter(n => n.id !== notificationId));
+        if (notificationToDelete && !notificationToDelete.is_read) {
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        }
+
+        const { error } = await supabase
+            .from('notifications')
+            .delete()
+            .eq('id', notificationId);
+
+        if (error) {
+            // Revert on failure
+            fetchNotifications();
+        }
+    };
+
+    const clearAllNotifications = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        // Optimistic
+        setNotifications([]);
+        setUnreadCount(0);
+
+        const { error } = await supabase
+            .from('notifications')
+            .delete()
+            .eq('user_id', session.user.id);
+
+        if (error) {
+            fetchNotifications();
+        }
+    };
+
     return (
         <NotificationContext.Provider value={{
             unreadCount,
             notifications,
             loading,
             markAsRead,
-            markAllAsRead
+            markAllAsRead,
+            deleteNotification,
+            clearAllNotifications
         }}>
             {children}
         </NotificationContext.Provider>

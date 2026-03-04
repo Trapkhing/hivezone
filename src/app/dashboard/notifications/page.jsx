@@ -2,12 +2,13 @@
 
 import React from "react";
 import Avatar from "@/components/ui/Avatar";
-
 import { useNotifications } from "@/components/providers/NotificationProvider";
 import { useRouter } from "next/navigation";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Delete02Icon } from "@hugeicons/core-free-icons";
 
 const MobileNotificationsPage = () => {
-    const { notifications, loading, markAsRead, markAllAsRead, unreadCount } = useNotifications();
+    const { notifications, loading, markAsRead, markAllAsRead, unreadCount, deleteNotification, clearAllNotifications } = useNotifications();
     const router = useRouter();
 
     const handleNotificationClick = async (notif) => {
@@ -29,6 +30,17 @@ const MobileNotificationsPage = () => {
                 break;
             default:
                 break;
+        }
+    };
+
+    const handleDelete = async (e, id) => {
+        e.stopPropagation();
+        await deleteNotification(id);
+    };
+
+    const handleClearAll = async () => {
+        if (window.confirm("Are you sure you want to delete all notifications?")) {
+            await clearAllNotifications();
         }
     };
 
@@ -57,14 +69,24 @@ const MobileNotificationsPage = () => {
         <div className="min-h-screen bg-[#fcf6de] px-4 md:hidden pb-20">
             <div className="flex items-center justify-between mt-4 mb-6">
                 <h1 className="text-2xl font-black font-newyork text-gray-900 tracking-tight">Notifications</h1>
-                {unreadCount > 0 && (
-                    <button
-                        onClick={markAllAsRead}
-                        className="text-[13px] font-bold text-[#ffc107] hover:text-[#e09e00] transition-colors"
-                    >
-                        Mark all read
-                    </button>
-                )}
+                <div className="flex gap-4">
+                    {notifications.length > 0 && (
+                        <button
+                            onClick={handleClearAll}
+                            className="text-[13px] font-bold text-red-500 hover:text-red-600 transition-colors"
+                        >
+                            Clear all
+                        </button>
+                    )}
+                    {unreadCount > 0 && (
+                        <button
+                            onClick={markAllAsRead}
+                            className="text-[13px] font-bold text-[#ffc107] hover:text-[#e09e00] transition-colors"
+                        >
+                            Mark all read
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -78,7 +100,7 @@ const MobileNotificationsPage = () => {
                     <div
                         key={notif.id}
                         onClick={() => handleNotificationClick(notif)}
-                        className={`flex items-start gap-4 p-4 bg-white rounded-[1.25rem] shadow-sm border ${notif.is_read ? 'border-gray-100' : 'border-[#ffc107]/50 bg-[#ffc107]/5'} cursor-pointer active:scale-[0.98] transition-all`}
+                        className={`flex items-start gap-4 p-4 bg-white rounded-[1.25rem] shadow-sm border ${notif.is_read ? 'border-gray-100' : 'border-[#ffc107]/50 bg-[#ffc107]/5'} cursor-pointer active:scale-[0.98] transition-all group relative`}
                     >
                         <div className="shrink-0">
                             <Avatar
@@ -88,10 +110,19 @@ const MobileNotificationsPage = () => {
                             />
                         </div>
                         <div className="flex-1 min-w-0 flex flex-col pt-0.5">
-                            <p className="text-[14px] font-bold text-gray-900 truncate leading-tight">
-                                {notif.actor?.computedName || "Someone"}
-                            </p>
-                            <p className={`text-[13px] truncate mt-0.5 ${notif.is_read ? 'font-medium text-gray-600' : 'font-bold text-gray-900'}`}>
+                            <div className="flex justify-between items-start gap-2">
+                                <p className="text-[14px] font-bold text-gray-900 truncate leading-tight">
+                                    {notif.actor?.computedName || "Someone"}
+                                </p>
+                                <button
+                                    onClick={(e) => handleDelete(e, notif.id)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-500 rounded-full hover:bg-red-100 transition-colors"
+                                >
+                                    <HugeiconsIcon icon={Delete02Icon} size={14} />
+                                    <span className="text-[11px] font-bold uppercase tracking-wider">Delete</span>
+                                </button>
+                            </div>
+                            <p className={`text-[13px] mt-1 ${notif.is_read ? 'font-medium text-gray-600' : 'font-bold text-gray-900'}`}>
                                 {notif.message || getActionText(notif.type)}
                             </p>
                         </div>

@@ -37,11 +37,6 @@ function NewChatContent() {
             if (!session) return;
             setCurrentUser(session.user);
 
-            // Check if a conversation already exists between these users
-            // If so, redirect to the existing chat instead
-            const rpcParams = { other_user_id: otherUserId };
-            if (gigId) rpcParams.p_gig_id = gigId;
-
             // Fetch the other user's profile
             const { data: userData } = await supabase
                 .from("users")
@@ -101,11 +96,24 @@ function NewChatContent() {
                 .from("conversations")
                 .update({
                     last_message: content,
-                    updated_at: new Date().toISOString()
+                    updated_at: new Date().toISOString(),
+                    hidden_by: [] // Clear hidden status so it resurfaces for everyone
                 })
                 .eq("id", conversationId);
 
-            // 4. Seamlessly swap to the real chat page
+            // 4. Create a "Gig Booked" notification for the gig author
+            if (gigId && otherUser) {
+                await supabase.from('notifications').insert({
+                    user_id: otherUserId,
+                    actor_id: currentUser.id,
+                    type: 'gig_purchase',
+                    entity_type: 'gig',
+                    entity_id: gigId,
+                    message: `Booked your gig: ${gig?.title || 'Gig'}`
+                });
+            }
+
+            // 5. Seamlessly swap to the real chat page
             router.replace(`/dashboard/chat/${conversationId}`);
         } catch (err) {
             console.error("Error creating conversation:", err);

@@ -1,0 +1,17 @@
+{
+    "name": "HiveZone",
+    "short_name": "HiveZone",
+    "description": "Connect with peers, find gigs, and thrive in your campus zone.",
+    "start_url": "/dashboard",
+    "display": "standalone",
+    "background_color": "#fcf6de",
+    "theme_color": "#ffc107",
+    "icons": [
+        {
+            "src": "/logoIcon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        }
+    ]
+}
