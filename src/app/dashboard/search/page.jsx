@@ -10,6 +10,8 @@ import {
     Cancel01Icon
 } from "@hugeicons/core-free-icons";
 import Link from 'next/link';
+import Avatar from '@/components/ui/Avatar';
+import { getDisplayName } from '@/utils/stringUtils';
 
 function SearchResults() {
     const searchParams = useSearchParams();
@@ -52,7 +54,11 @@ function SearchResults() {
         if (error) {
             console.error('Search error:', error);
         } else {
-            setResults(data || []);
+            const formattedResults = (data || []).map(user => ({
+                ...user,
+                computedName: getDisplayName(user)
+            }));
+            setResults(formattedResults);
         }
         setLoading(false);
     };
@@ -110,16 +116,16 @@ function SearchResults() {
                                 key={user.id}
                                 className="bg-white p-4 rounded-3xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:border-[#ffc107] transition-all group active:scale-[0.98]"
                             >
-                                <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 border border-gray-100 bg-gray-50">
-                                    <img
+                                <div className="shrink-0">
+                                    <Avatar
                                         src={user.profile_picture}
-                                        alt={user.display_name}
-                                        className="w-full h-full object-cover"
+                                        name={user.computedName || "?"}
+                                        className="w-14 h-14 rounded-full border border-gray-100"
                                     />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <h3 className="font-black text-gray-900 truncate">
-                                        {user.display_name || user.username}
+                                        {user.computedName}
                                     </h3>
                                     <p className="text-xs font-bold text-gray-500">@{user.username || 'user'}</p>
                                     {user.bio && (

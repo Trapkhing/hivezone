@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { getDisplayName } from "@/utils/stringUtils";
 
 const NotificationContext = createContext({
     unreadCount: 0,
@@ -28,14 +29,19 @@ export default function NotificationProvider({ children }) {
             .from('notifications')
             .select(`
                 *,
-                actor:users!actor_id (display_name, profile_picture, username)
+                actor:users!actor_id (display_name, first_name, profile_picture, username)
             `)
             .eq('user_id', session.user.id)
             .order('created_at', { ascending: false });
 
         if (!error && data) {
-            setNotifications(data);
-            setUnreadCount(data.filter(n => !n.is_read).length);
+            const formattedData = data.map(notif => ({
+                ...notif,
+                actor: notif.actor ? { ...notif.actor, computedName: getDisplayName(notif.actor) } : null
+            }));
+
+            setNotifications(formattedData);
+            setUnreadCount(formattedData.filter(n => !n.is_read).length);
         }
         setLoading(false);
     };

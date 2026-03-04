@@ -16,6 +16,9 @@ import {
 import ChatSidebar from "@/components/dashboard/ChatSidebar";
 import { MessageSkeleton } from "@/components/ui/Skeleton";
 import { useUI } from "@/components/ui/UIProvider";
+import { useChatConfig } from "@/components/providers/ChatProvider";
+import Avatar from "@/components/ui/Avatar";
+import { getDisplayName } from "@/utils/stringUtils";
 
 export default function ChatWindowPage() {
     const { id } = useParams();
@@ -28,11 +31,26 @@ export default function ChatWindowPage() {
     const scrollRef = useRef(null);
     const supabase = createClient();
     const { confirmAction, showToast } = useUI();
+    const { setActiveConversation, refreshUnreadCount } = useChatConfig();
+
+    // Register this chat as the active conversation so the global provider
+    // skips incrementing unread counts for messages arriving here
+    useEffect(() => {
+        setActiveConversation(id);
+        return () => {
+            setActiveConversation(null);
+            // Refresh to get the true DB count after leaving
+            refreshUnreadCount();
+        };
+    }, [id, setActiveConversation, refreshUnreadCount]);
 
     useEffect(() => {
+        let channel = null;
+        let cancelled = false;
+
         const setupChat = async () => {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
+            if (!session || cancelled) return;
             setCurrentUser(session.user);
 
             // 1. Fetch conversation details (who am I talking to?)
@@ -41,25 +59,25 @@ export default function ChatWindowPage() {
                 .select(`
                     *,
                     participants:conversation_participants(
-                        user:users(id, display_name, profile_picture, username)
+                        user:users(id, display_name, first_name, profile_picture, username)
                     ),
                     gig:gigs(
                         id, title, price, category,
-                        author:users(display_name, profile_picture)
+                        author:users(display_name, first_name, profile_picture)
                     )
                 `)
                 .eq('id', id)
                 .single();
 
-            if (convError) {
-                console.error("Error fetching conversation:", convError);
+            if (convError || cancelled) {
+                if (convError) console.error("Error fetching conversation:", convError);
                 return;
             }
 
-            const otherParticipant = convData.participants.find(p => p.user.id !== session.user.id);
+            const otherUserRaw = convData.participants.find(p => p.user.id !== session.user.id)?.user;
             setConversation({
                 ...convData,
-                otherUser: otherParticipant?.user || { display_name: "User" }
+                otherUser: otherUserRaw ? { ...otherUserRaw, computedName: getDisplayName(otherUserRaw) } : { computedName: "Somebody", display_name: "Somebody" }
             });
 
             // 2. Fetch messages
@@ -69,7 +87,7 @@ export default function ChatWindowPage() {
                 .eq('conversation_id', id)
                 .order('created_at', { ascending: true });
 
-            if (!msgError) {
+            if (!msgError && !cancelled) {
                 setMessages(msgData || []);
 
                 // Mark incoming messages as read
@@ -84,18 +102,18 @@ export default function ChatWindowPage() {
             }
             setLoading(false);
 
+            if (cancelled) return;
+
             // 3. Subscribe to real-time updates
-            const channel = supabase
-                .channel(`chat:${id}`)
+            channel = supabase
+                .channel(`chat:${id}:${Date.now()}`)
                 .on(
                     'postgres_changes',
                     { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${id}` },
                     (payload) => {
                         setMessages(prev => {
-                            // Only add if it doesn't exist to prevent double-rendering from optimistic updates
                             if (prev.find(m => m.id === payload.new.id)) return prev;
 
-                            // Check if this incoming real message matches an optimistic message we just sent
                             const optimisticMatch = prev.find(m =>
                                 m.id.toString().startsWith('temp-') &&
                                 m.sender_id === payload.new.sender_id &&
@@ -103,7 +121,6 @@ export default function ChatWindowPage() {
                             );
 
                             if (optimisticMatch) {
-                                // Replace the optimistic temp message with the real one
                                 return prev.map(m => m.id === optimisticMatch.id ? payload.new : m);
                             }
 
@@ -128,15 +145,28 @@ export default function ChatWindowPage() {
                         ));
                     }
                 )
-                .subscribe();
-
-            return () => {
-                supabase.removeChannel(channel);
-            };
+                .subscribe((status) => {
+                    if (status === 'CHANNEL_ERROR') {
+                        console.error('Chat channel error, retrying...');
+                        // Auto-retry by re-subscribing
+                        setTimeout(() => {
+                            if (!cancelled && channel) {
+                                channel.subscribe();
+                            }
+                        }, 2000);
+                    }
+                });
         };
 
         setupChat();
-    }, [id, supabase]);
+
+        return () => {
+            cancelled = true;
+            if (channel) {
+                supabase.removeChannel(channel);
+            }
+        };
+    }, [id]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -193,12 +223,13 @@ export default function ChatWindowPage() {
             // Revert optimistic update on failure
             setMessages(prev => prev.filter(m => m.id !== tempId));
         } else {
-            // Update conversation updated_at and last_message
+            // Update conversation updated_at, last_message, and clear hidden_by so it resurrects for the other user
             await supabase
                 .from('conversations')
                 .update({
                     last_message: content,
-                    updated_at: new Date().toISOString()
+                    updated_at: new Date().toISOString(),
+                    hidden_by: []
                 })
                 .eq('id', id);
         }
@@ -308,15 +339,15 @@ export default function ChatWindowPage() {
                             <button onClick={() => router.push('/dashboard/chat')} className="md:hidden p-2 hover:bg-gray-50 rounded-full transition-colors mr-1">
                                 <HugeiconsIcon icon={ArrowLeft01Icon} size={20} className="text-gray-900" />
                             </button>
-                            <div className="size-10 rounded-full overflow-hidden border-2 border-[#ffc107]/20 shadow-sm relative shrink-0">
-                                <img
+                            <div className="shrink-0">
+                                <Avatar
                                     src={conversation?.otherUser.profile_picture}
-                                    alt={conversation?.otherUser.display_name}
-                                    className="w-full h-full object-cover"
+                                    name={conversation?.otherUser.computedName || '?'}
+                                    className="size-10 rounded-full border-2 border-[#ffc107]/20 shadow-sm"
                                 />
                             </div>
                             <div className="min-w-0 flex flex-col justify-center">
-                                <h2 className="text-[15px] font-black text-gray-900 leading-tight truncate">{conversation?.otherUser.display_name}</h2>
+                                <h2 className="text-[15px] font-black text-gray-900 leading-tight truncate">{conversation?.otherUser.computedName}</h2>
                                 {conversation?.otherUser.username && (
                                     <span className="text-[12px] font-medium text-gray-500 truncate">@{conversation.otherUser.username}</span>
                                 )}
@@ -340,8 +371,12 @@ export default function ChatWindowPage() {
                                 onClick={() => router.push(`/dashboard/gigs/detail?id=${conversation.gig.id}`)}
                                 className="cursor-pointer mx-auto w-full max-w-sm bg-white border-2 border-[#ffc107]/30 rounded-[1.5rem] p-4 flex gap-3 items-center shadow-sm hover:border-[#ffc107] hover:shadow-md transition-all mb-2"
                             >
-                                <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 bg-gray-100 border border-gray-100">
-                                    <img src={conversation.gig.author?.profile_picture} alt={conversation.gig.author?.display_name} className="w-full h-full object-cover" />
+                                <div className="shrink-0">
+                                    <Avatar
+                                        src={conversation.gig.author?.profile_picture}
+                                        name={getDisplayName(conversation.gig.author, '?')}
+                                        className="w-12 h-12 rounded-full border border-gray-100"
+                                    />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Gig Reference</p>

@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { getOrCreateConversation } from "@/utils/chat";
 import Avatar from "@/components/ui/Avatar";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GigCardSkeleton } from "@/components/ui/Skeleton";
@@ -322,14 +321,9 @@ export default function GigsPage() {
                                 </Link>
                                 {gig.author?.id !== currentUserId && (
                                     <button
-                                        onClick={async (e) => {
+                                        onClick={(e) => {
                                             e.stopPropagation();
-                                            try {
-                                                const chatId = await getOrCreateConversation(gig.author.id, gig.id);
-                                                router.push(`/dashboard/chat/${chatId}`);
-                                            } catch (err) {
-                                                console.error("Error starting chat:", err);
-                                            }
+                                            router.push(`/dashboard/chat/new?user=${gig.author.id}&gig=${gig.id}`);
                                         }}
                                         className="w-12 h-12 bg-white flex items-center justify-center rounded-full hover:bg-gray-50 transition-colors shadow-sm border border-gray-100 shrink-0"
                                         title="Book Gig"

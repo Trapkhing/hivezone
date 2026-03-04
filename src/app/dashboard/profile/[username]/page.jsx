@@ -3,11 +3,11 @@
 import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { getOrCreateConversation } from "@/utils/chat";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { LinkSquare02Icon } from "@hugeicons/core-free-icons";
 import { ProfileSkeleton } from "@/components/ui/Skeleton";
 import Avatar from "@/components/ui/Avatar";
+import { getDisplayName } from "@/utils/stringUtils";
 
 export default function PublicProfilePage() {
     const router = useRouter();
@@ -134,13 +134,8 @@ export default function PublicProfilePage() {
                         {/* Top row: Message Button aligned to the right */}
                         <div className="w-full flex justify-end pt-3 md:pt-6">
                             <button
-                                onClick={async () => {
-                                    try {
-                                        const chatId = await getOrCreateConversation(profile.id);
-                                        router.push(`/dashboard/chat/${chatId}`);
-                                    } catch (err) {
-                                        console.error("Error starting chat:", err);
-                                    }
+                                onClick={() => {
+                                    router.push(`/dashboard/chat/new?user=${profile.id}`);
                                 }}
                                 className="px-4 py-1.5 md:px-6 md:py-2 rounded-full border border-gray-300 md:border-[#ffc107] bg-white md:bg-[#ffc107] text-gray-900 md:text-black font-bold text-[13px] md:text-[15px] hover:bg-gray-50 md:hover:bg-[#ffb300] transition-colors shadow-sm"
                             >
@@ -155,7 +150,7 @@ export default function PublicProfilePage() {
                             <div className="flex flex-col mt-2 md:mt-0">
                                 {/* Info Block */}
                                 <h1 className="text-[26px] md:text-3xl sm:text-[34px] font-black font-newyork text-gray-900 tracking-tight leading-none">
-                                    {profile?.display_name || (profile?.first_name ? `${profile.first_name} ${profile.last_name || ''}` : "")}
+                                    {getDisplayName(profile, "User")}
                                 </h1>
                                 <span className="text-[14px] font-medium mt-1 text-gray-500">
                                     {profile?.username ? `@${profile.username}` : ""}

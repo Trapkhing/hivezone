@@ -5,13 +5,17 @@ import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
     BubbleChatIcon,
-    Search01Icon
+    Search01Icon,
+    Delete01Icon
 } from "@hugeicons/core-free-icons";
 import { ConversationSkeleton } from "@/components/ui/Skeleton";
 import { useChatConfig } from "@/components/providers/ChatProvider";
+import { useUI } from "@/components/ui/UIProvider";
+import Avatar from "@/components/ui/Avatar";
 
 export default function ChatSidebar({ activeId }) {
-    const { conversations, loadingConversations } = useChatConfig();
+    const { conversations, loadingConversations, hideConversation } = useChatConfig();
+    const { confirmAction } = useUI();
 
     return (
         <div className="w-full md:w-[350px] lg:w-[400px] flex flex-col border-r border-gray-100 h-full bg-white shrink-0">
@@ -53,17 +57,17 @@ export default function ChatSidebar({ activeId }) {
                             className={`flex items-center gap-4 p-4 rounded-[2rem] transition-all group active:scale-[0.98] ${activeId === chat.id ? 'bg-[#ffc107]/10' : 'hover:bg-gray-50'
                                 }`}
                         >
-                            <div className="size-14 rounded-full overflow-hidden border-2 border-white shadow-sm shrink-0">
-                                <img
+                            <div className="shrink-0">
+                                <Avatar
                                     src={chat.otherUser.profile_picture}
-                                    alt={chat.otherUser.display_name}
-                                    className="w-full h-full object-cover"
+                                    name={chat.otherUser.computedName || '?'}
+                                    className="size-14 rounded-full border-2 border-white shadow-sm"
                                 />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-baseline mb-0.5">
                                     <h3 className={`text-[15px] truncate font-extrabold ${chat.unreadCount > 0 ? 'text-black' : (activeId === chat.id ? 'text-gray-900' : 'text-gray-800')}`}>
-                                        {chat.otherUser.display_name}
+                                        {chat.otherUser.computedName}
                                     </h3>
                                     <span className={`text-[11px] font-bold shrink-0 ${chat.unreadCount > 0 ? 'text-[#ffc107]' : 'text-gray-400'}`}>
                                         {new Date(chat.updated_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
@@ -78,11 +82,33 @@ export default function ChatSidebar({ activeId }) {
                                     <p className={`text-[13px] truncate flex-1 ${chat.unreadCount > 0 ? 'font-bold text-black' : (activeId === chat.id ? 'font-medium text-gray-700' : 'font-medium text-gray-500')}`}>
                                         {chat.last_message}
                                     </p>
-                                    {chat.unreadCount > 0 && (
-                                        <span className="w-5 h-5 min-w-[20px] bg-[#ffc107] text-black text-[10px] font-black rounded-full flex items-center justify-center shrink-0">
-                                            {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
-                                        </span>
-                                    )}
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                confirmAction({
+                                                    title: "Hide Conversation",
+                                                    message: "Are you sure you want to hide this conversation? It will reappear if they send a new message.",
+                                                    confirmText: "Yes, hide it",
+                                                    cancelText: "Cancel",
+                                                    onConfirm: async () => {
+                                                        await hideConversation(chat.id);
+                                                    }
+                                                });
+                                            }}
+                                            className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 z-10 shrink-0"
+                                            title="Hide conversation"
+                                        >
+                                            <HugeiconsIcon icon={Delete01Icon} size={16} />
+                                        </button>
+
+                                        {chat.unreadCount > 0 && (
+                                            <span className="w-5 h-5 min-w-[20px] bg-[#ffc107] text-black text-[10px] font-black rounded-full flex items-center justify-center shrink-0">
+                                                {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </Link>

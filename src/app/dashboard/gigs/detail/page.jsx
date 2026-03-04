@@ -3,7 +3,6 @@
 import React, { useState, useEffect, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { getOrCreateConversation } from "@/utils/chat";
 import { useUI } from "@/components/ui/UIProvider";
 import Avatar from "@/components/ui/Avatar";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -308,26 +307,16 @@ function GigDetailContent() {
                         ) : (
                             <>
                                 <button
-                                    onClick={async () => {
-                                        try {
-                                            const chatId = await getOrCreateConversation(gig.author.id, gig.id);
-                                            router.push(`/dashboard/chat/${chatId}`);
-                                        } catch (err) {
-                                            console.error("Error starting chat:", err);
-                                        }
+                                    onClick={() => {
+                                        router.push(`/dashboard/chat/new?user=${gig.author.id}&gig=${gig.id}`);
                                     }}
                                     className="w-full bg-[#ffc107] hover:bg-[#ffca2c] text-black font-black text-lg py-4 rounded-[1.5rem] transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 mb-3"
                                 >
                                     Book this Gig
                                 </button>
                                 <button
-                                    onClick={async () => {
-                                        try {
-                                            const chatId = await getOrCreateConversation(gig.author.id, gig.id);
-                                            router.push(`/dashboard/chat/${chatId}`);
-                                        } catch (err) {
-                                            console.error("Error starting chat:", err);
-                                        }
+                                    onClick={() => {
+                                        router.push(`/dashboard/chat/new?user=${gig.author.id}&gig=${gig.id}`);
                                     }}
                                     className="w-full bg-white border-2 border-gray-100 hover:border-black hover:bg-gray-50 text-black font-bold text-lg py-3.5 rounded-[1.5rem] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                                 >

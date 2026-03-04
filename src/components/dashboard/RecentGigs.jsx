@@ -64,15 +64,15 @@ const RecentGigs = () => {
     }, [supabase]);
 
     return (
-        <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100 flex flex-col gap-4">
+        <div className="bg-white rounded-[2rem] p-5 shadow-sm border border-gray-100 flex flex-col gap-4">
             <h2 className="text-3xl font-black font-newyork tracking-wide text-gray-900 w-2/3">
                 Recent<br />Campus Gigs
             </h2>
 
-            <div className="flex gap-4 w-full pb-2 overflow-hidden">
+            <div className="flex gap-3 w-full pb-2 overflow-hidden">
                 {loading ? (
                     [1, 2].map((i) => (
-                        <div key={i} className="flex-1 rounded-[2rem] bg-gray-50 p-3 flex flex-col items-center animate-pulse">
+                        <div key={i} className="flex-1 min-w-0 rounded-[2rem] bg-gray-50 p-3 flex flex-col items-center animate-pulse">
                             <div className="w-14 h-14 rounded-full bg-gray-200 mb-2" />
                             <div className="h-3 w-16 bg-gray-200 rounded mb-2" />
                             <div className="h-2 w-20 bg-gray-100 rounded mb-4" />
@@ -85,7 +85,7 @@ const RecentGigs = () => {
                         <Link
                             key={gig.id}
                             href={`/dashboard/gigs/detail?id=${gig.id}`}
-                            className="flex-1 rounded-[2rem] bg-[#fde68a] p-3 flex flex-col items-center text-center shadow-sm relative hover:bg-[#ffe066] transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer group"
+                            className="flex-1 min-w-0 rounded-[2rem] bg-[#fde68a] p-3 flex flex-col items-center text-center shadow-sm relative hover:bg-[#ffe066] transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer group"
                         >
                             <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white/50 mb-2 relative">
                                 <Avatar

@@ -8,6 +8,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { useChatConfig } from '@/components/providers/ChatProvider';
 import { useNotifications } from '@/components/providers/NotificationProvider';
+import { getDisplayName } from '@/utils/stringUtils';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
     Mail01Icon,
@@ -32,7 +33,7 @@ const Navbar = () => {
     const [profile, setProfile] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
     const { unreadCount: chatUnreadCount } = useChatConfig();
-    const { unreadCount: notificationUnreadCount, notifications, markAsRead } = useNotifications();
+    const { unreadCount: notificationUnreadCount, notifications, markAsRead, markAllAsRead } = useNotifications();
 
     const triggerSearch = () => {
         if (searchQuery.trim()) {
@@ -183,7 +184,7 @@ const Navbar = () => {
             <div className="flex items-center justify-between w-full md:hidden relative">
                 {/* Left: Profile Pic */}
                 <button onClick={() => setIsMobileSidebarOpen(true)} className="flex items-center shrink-0 w-9 h-9 rounded-full bg-blue-500 overflow-hidden shadow-sm border border-gray-200">
-                    <Avatar src={profile?.profile_picture} name={profile?.display_name} className="w-full h-full rounded-full" />
+                    <Avatar src={profile?.profile_picture} name={getDisplayName(profile, "User")} className="w-full h-full rounded-full" />
                 </button>
 
                 {/* Center: Logo */}
@@ -274,7 +275,17 @@ const Navbar = () => {
                         {/* Notification Dropdown Panel */}
                         {isNotifOpen && (
                             <div className="absolute right-0 mt-3 w-80 bg-white rounded-3xl shadow-xl shadow-black/10 border border-gray-100 py-3 z-50 overflow-hidden flex flex-col max-h-[450px]">
-                                <h3 className="px-5 mb-2 font-black text-gray-900 text-lg">Notifications</h3>
+                                <div className="px-5 mb-2 flex items-center justify-between">
+                                    <h3 className="font-black text-gray-900 text-lg">Notifications</h3>
+                                    {notificationUnreadCount > 0 && (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); markAllAsRead(); }}
+                                            className="text-[12px] font-bold text-[#ffc107] hover:text-[#e09e00] transition-colors"
+                                        >
+                                            Mark all read
+                                        </button>
+                                    )}
+                                </div>
                                 <div className="overflow-y-auto flex-1 px-2 custom-scrollbar">
                                     {notifications.length === 0 ? (
                                         <div className="text-center text-gray-500 py-6 font-medium text-sm">No notifications yet</div>
@@ -284,18 +295,16 @@ const Navbar = () => {
                                             onClick={() => handleNotificationClick(notif)}
                                             className={`flex items-center gap-4 p-3 rounded-2xl cursor-pointer transition-colors mb-1 ${notif.is_read ? 'hover:bg-gray-50' : 'bg-[#ffc107]/5 border border-[#ffc107]/20 hover:bg-[#ffc107]/10'}`}
                                         >
-                                            <div className="w-11 h-11 rounded-full bg-gray-200 shrink-0 border border-gray-100 overflow-hidden">
-                                                {notif.actor?.profile_picture ? (
-                                                    <img src={notif.actor.profile_picture} alt="" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 font-bold">
-                                                        {notif.actor?.display_name?.charAt(0) || '?'}
-                                                    </div>
-                                                )}
+                                            <div className="shrink-0">
+                                                <Avatar
+                                                    src={notif.actor?.profile_picture}
+                                                    name={notif.actor?.computedName || "?"}
+                                                    className="w-11 h-11 rounded-full border border-gray-100"
+                                                />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-[13px] font-bold text-gray-900 truncate">
-                                                    {notif.actor?.display_name || "Someone"}
+                                                    {notif.actor?.computedName || "Someone"}
                                                 </p>
                                                 <p className={`text-[12px] truncate ${notif.is_read ? 'font-medium text-gray-600' : 'font-bold text-gray-900'}`}>
                                                     {notif.message || getActionText(notif.type)}
@@ -324,7 +333,7 @@ const Navbar = () => {
                             className="flex items-center bg-[#ffc107] p-1 rounded-full cursor-pointer hover:bg-[#ffca2c] transition-colors ml-2 shadow-sm"
                         >
                             {/* Profile Avatar */}
-                            <Avatar src={profile?.profile_picture} name={profile?.display_name} className="w-9 h-9 rounded-full" />
+                            <Avatar src={profile?.profile_picture} name={getDisplayName(profile, "User")} className="w-9 h-9 rounded-full" />
 
                             <div className="w-3"></div> {/* Spacing */}
 
@@ -367,10 +376,10 @@ const Navbar = () => {
                     <div className="relative w-[280px] max-w-[80vw] h-full bg-white shadow-2xl flex flex-col">
                         {/* Header */}
                         <div className="p-6 border-b border-gray-100 flex flex-col gap-3 bg-[#fcf6de]/30">
-                            <Avatar src={profile?.profile_picture} name={profile?.display_name} className="w-14 h-14 rounded-full border-2 border-white shadow-sm" />
+                            <Avatar src={profile?.profile_picture} name={getDisplayName(profile, "User")} className="w-14 h-14 rounded-full border-2 border-white shadow-sm" />
                             <div className="flex flex-col">
                                 <span className="font-bold text-gray-900 text-lg">
-                                    {profile?.display_name || (profile?.first_name ? `${profile.first_name} ${profile.last_name || ''} ` : "")}
+                                    {getDisplayName(profile, "User")}
                                 </span>
                                 <span className="text-gray-500 font-medium text-[13px]">
                                     {profile?.username ? `@${profile.username} ` : ""}

@@ -10,6 +10,7 @@ import { ProfileSkeleton } from "@/components/ui/Skeleton";
 
 // Components
 import Avatar from "@/components/ui/Avatar";
+import { getDisplayName } from "@/utils/stringUtils";
 
 export default function ProfilePage() {
     const { showToast } = useUI();
@@ -298,7 +299,7 @@ export default function ProfilePage() {
                             <div className="flex flex-col mt-2 md:mt-0">
                                 {/* Info Block */}
                                 <h1 className="text-[26px] md:text-3xl sm:text-[34px] font-black font-newyork text-gray-900 tracking-tight leading-none">
-                                    {profile?.display_name || (profile?.first_name ? `${profile.first_name} ${profile.last_name || ''}` : "")}
+                                    {getDisplayName(profile, "User")}
                                 </h1>
                                 <span className="text-[14px] font-medium mt-1 text-gray-500">
                                     {profile?.username ? `@${profile.username}` : ""}

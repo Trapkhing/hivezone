@@ -1,13 +1,13 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
+import Avatar from "@/components/ui/Avatar";
 
 import { useNotifications } from "@/components/providers/NotificationProvider";
 import { useRouter } from "next/navigation";
 
 const MobileNotificationsPage = () => {
-    const { notifications, loading, markAsRead } = useNotifications();
+    const { notifications, loading, markAsRead, markAllAsRead, unreadCount } = useNotifications();
     const router = useRouter();
 
     const handleNotificationClick = async (notif) => {
@@ -55,7 +55,17 @@ const MobileNotificationsPage = () => {
 
     return (
         <div className="min-h-screen bg-[#fcf6de] px-4 md:hidden pb-20">
-            <h1 className="text-2xl font-black font-newyork text-gray-900 mt-4 mb-6 tracking-tight">Notifications</h1>
+            <div className="flex items-center justify-between mt-4 mb-6">
+                <h1 className="text-2xl font-black font-newyork text-gray-900 tracking-tight">Notifications</h1>
+                {unreadCount > 0 && (
+                    <button
+                        onClick={markAllAsRead}
+                        className="text-[13px] font-bold text-[#ffc107] hover:text-[#e09e00] transition-colors"
+                    >
+                        Mark all read
+                    </button>
+                )}
+            </div>
 
             <div className="flex flex-col gap-2">
                 {loading ? (
@@ -70,22 +80,16 @@ const MobileNotificationsPage = () => {
                         onClick={() => handleNotificationClick(notif)}
                         className={`flex items-start gap-4 p-4 bg-white rounded-[1.25rem] shadow-sm border ${notif.is_read ? 'border-gray-100' : 'border-[#ffc107]/50 bg-[#ffc107]/5'} cursor-pointer active:scale-[0.98] transition-all`}
                     >
-                        <div className="w-12 h-12 rounded-full bg-gray-200 shrink-0 border border-gray-100 overflow-hidden relative">
-                            {notif.actor?.profile_picture ? (
-                                <img
-                                    src={notif.actor.profile_picture}
-                                    alt={notif.actor.display_name}
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : (
-                                <div className="w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 font-bold">
-                                    {notif.actor?.display_name?.charAt(0) || '?'}
-                                </div>
-                            )}
+                        <div className="shrink-0">
+                            <Avatar
+                                src={notif.actor?.profile_picture}
+                                name={notif.actor?.computedName || "?"}
+                                className="w-12 h-12 rounded-full border border-gray-100"
+                            />
                         </div>
                         <div className="flex-1 min-w-0 flex flex-col pt-0.5">
                             <p className="text-[14px] font-bold text-gray-900 truncate leading-tight">
-                                {notif.actor?.display_name || "Someone"}
+                                {notif.actor?.computedName || "Someone"}
                             </p>
                             <p className={`text-[13px] truncate mt-0.5 ${notif.is_read ? 'font-medium text-gray-600' : 'font-bold text-gray-900'}`}>
                                 {notif.message || getActionText(notif.type)}

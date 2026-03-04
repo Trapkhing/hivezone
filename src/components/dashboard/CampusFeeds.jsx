@@ -332,7 +332,7 @@ const CampusFeeds = () => {
                     posts.map(post => (
                         <div
                             key={post.id}
-                            className={`bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col pt-5 pb-0 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700`}
+                            className={`bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col pt-5 pb-0 animate-in fade-in slide-in-from-bottom-4 duration-700`}
                         >
                             <div className="flex gap-4 px-5 pb-4">
                                 {/* Left: Avatar */}
