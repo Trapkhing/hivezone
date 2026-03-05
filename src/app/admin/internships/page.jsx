@@ -6,7 +6,7 @@ import { useEffect } from "react";
 export default function InternshipsPage() {
     const router = useRouter();
     useEffect(() => {
-        router.replace("/dashboard");
+        router.replace("/admin");
     }, [router]);
     return null;
 }

@@ -53,7 +53,7 @@ const CustomDropdown = ({
                 className={`
                     w-full bg-transparent border rounded-lg px-4 py-2.5 pr-10 text-sm text-left
                     outline-none transition-colors cursor-pointer
-                    ${isOpen ? "border-[#ffc107]" : "border-zinc-300"}
+                    ${isOpen ? "border-[#ffc107]" : "border-gray-600"}
                     ${value ? "text-zinc-900" : "text-zinc-400"}
                 `}
             >

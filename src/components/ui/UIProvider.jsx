@@ -5,6 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import Toast from './Toast';
 import ConfirmModal from './ConfirmModal';
 import ImageModal from './ImageModal';
+import ReportModal from './ReportModal';
 
 const UIContext = createContext();
 
@@ -20,6 +21,7 @@ export const UIProvider = ({ children }) => {
     const [toasts, setToasts] = useState([]);
     const [confirmData, setConfirmData] = useState(null);
     const [fullScreenImage, setFullScreenImage] = useState(null);
+    const [reportData, setReportData] = useState(null);
 
     const showToast = useCallback((message, type = 'success') => {
         const id = Math.random().toString(36).substr(2, 9);
@@ -53,12 +55,16 @@ export const UIProvider = ({ children }) => {
         setFullScreenImage(src);
     }, []);
 
+    const openReportModal = useCallback((data) => {
+        setReportData(data);
+    }, []);
+
     const removeToast = useCallback((id) => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
     }, []);
 
     return (
-        <UIContext.Provider value={{ showToast, confirmAction, showImage }}>
+        <UIContext.Provider value={{ showToast, confirmAction, showImage, openReportModal }}>
             {children}
 
             {/* Toast Container */}
@@ -89,6 +95,17 @@ export const UIProvider = ({ children }) => {
                     <ImageModal
                         src={fullScreenImage}
                         onClose={() => setFullScreenImage(null)}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Report Modal */}
+            <AnimatePresence>
+                {reportData && (
+                    <ReportModal
+                        {...reportData}
+                        onClose={() => setReportData(null)}
+                        showToast={showToast}
                     />
                 )}
             </AnimatePresence>

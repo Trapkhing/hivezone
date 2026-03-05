@@ -418,12 +418,6 @@ const Navbar = () => {
                             <Link href="/dashboard/gigs" onClick={() => setIsMobileSidebarOpen(false)} className="px-4 py-3.5 rounded-2xl hover:bg-gray-50 flex items-center gap-4">
                                 <span className="font-bold text-gray-900 text-[16px]">Campus Gigs</span>
                             </Link>
-                            <Link href="/dashboard/scholarships" onClick={() => setIsMobileSidebarOpen(false)} className="px-4 py-3.5 rounded-2xl hover:bg-gray-50 flex items-center gap-4">
-                                <span className="font-bold text-gray-900 text-[16px]">Scholarships</span>
-                            </Link>
-                            <Link href="/dashboard/internships" onClick={() => setIsMobileSidebarOpen(false)} className="px-4 py-3.5 rounded-2xl hover:bg-gray-50 flex items-center gap-4">
-                                <span className="font-bold text-gray-900 text-[16px]">Internships</span>
-                            </Link>
                             <Link href="/dashboard/study-circles" onClick={() => setIsMobileSidebarOpen(false)} className="px-4 py-3.5 rounded-2xl hover:bg-gray-50 flex items-center gap-4">
                                 <span className="font-bold text-gray-900 text-[16px]">Study Circles</span>
                             </Link>

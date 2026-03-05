@@ -17,14 +17,6 @@ const Sidebar = () => {
                         <span className="font-medium text-gray-800">Campus Gigs</span>
                     </Link>
 
-                    <Link href="/dashboard/scholarships" className="flex items-center justify-center py-4 px-6 rounded-full border border-[#ffc107] bg-white hover:bg-[#ffc107]/10 transition">
-                        <span className="font-medium text-gray-800">Scholarships</span>
-                    </Link>
-
-                    <Link href="/dashboard/internships" className="flex items-center justify-center py-4 px-6 rounded-full border border-[#ffc107] bg-white hover:bg-[#ffc107]/10 transition">
-                        <span className="font-medium text-gray-800">Internships</span>
-                    </Link>
-
                     <Link href="/dashboard/study-circles" className="flex items-center justify-center py-4 px-6 rounded-full border border-[#ffc107] bg-white hover:bg-[#ffc107]/10 transition">
                         <span className="font-medium text-gray-800">Study Circles</span>
                     </Link>

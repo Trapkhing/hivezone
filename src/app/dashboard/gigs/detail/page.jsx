@@ -25,7 +25,7 @@ function GigDetailContent() {
     const searchParams = useSearchParams();
     const gid = searchParams.get("id");
     const supabase = createClient();
-    const { confirmAction, showToast } = useUI();
+    const { confirmAction, showToast, openReportModal } = useUI();
     const menuRef = useRef(null);
 
     const [gig, setGig] = useState(null);
@@ -135,9 +135,12 @@ function GigDetailContent() {
         }
     };
 
-    const handleReportGig = () => {
-        showToast("Gig reported to administrators", "success");
-        setShowMenu(false);
+    const handleReportGig = async () => {
+        openReportModal({
+            item_id: gig.id,
+            item_type: 'gig',
+            onSuccess: () => setShowMenu(false)
+        });
     };
 
     if (loading) {
@@ -329,6 +332,13 @@ function GigDetailContent() {
                                 >
                                     <HugeiconsIcon icon={Message01Icon} className="w-5 h-5" />
                                     Negotiate
+                                </button>
+                                <button
+                                    onClick={handleReportGig}
+                                    className="mt-6 flex items-center justify-center gap-2 text-xs font-black text-gray-400 hover:text-red-500 transition-colors py-2 uppercase tracking-widest"
+                                >
+                                    <HugeiconsIcon icon={Alert02Icon} className="w-3.5 h-3.5" />
+                                    Report this listing
                                 </button>
                             </>
                         )}

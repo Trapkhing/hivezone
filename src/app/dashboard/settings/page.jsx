@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useUI } from "@/components/ui/UIProvider";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertIcon, ArrowLeft01Icon } from "@hugeicons/core-free-icons";
+import { AlertIcon, ArrowLeft01Icon, Camera01Icon } from "@hugeicons/core-free-icons";
 import { PageSkeleton } from "@/components/ui/Skeleton";
+import { useRef } from "react";
 
 // Menu items based on the user's design image
 const menuItems = [
@@ -29,6 +30,8 @@ export default function SettingsPage() {
     // Form states
     const [profileData, setProfileData] = useState({ displayName: "", username: "", bio: "", profilePicture: "" });
     const [passwordData, setPasswordData] = useState({ current: "", new: "", confirm: "" });
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef(null);
     const [bioVisibility, setBioVisibility] = useState("everybody"); // everybody, contacts, nobody
 
     useEffect(() => {
@@ -62,6 +65,57 @@ export default function SettingsPage() {
 
         fetchUser();
     }, [router, supabase]);
+
+    const handleImageUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file || !userId) return;
+
+        // Basic validation
+        if (!file.type.startsWith('image/')) {
+            showToast("Please upload an image file.", "error");
+            return;
+        }
+
+        if (file.size > 2 * 1024 * 1024) { // 2MB limit
+            showToast("File size must be less than 2MB.", "error");
+            return;
+        }
+
+        setUploading(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${userId}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            // Upload to 'avatars' bucket
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, file, { upsert: true });
+
+            if (uploadError) throw uploadError;
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(filePath);
+
+            // Update user profile in DB
+            const { error: updateError } = await supabase
+                .from('users')
+                .update({ profile_picture: publicUrl })
+                .eq('id', userId);
+
+            if (updateError) throw updateError;
+
+            setProfileData(prev => ({ ...prev, profilePicture: publicUrl }));
+            showToast("Profile picture updated!");
+        } catch (error) {
+            console.error("Error uploading image:", error);
+            showToast("Failed to upload image. Make sure 'avatars' bucket exists.", "error");
+        } finally {
+            setUploading(false);
+        }
+    };
 
     const handleUpdateProfile = async () => {
         if (!userId) return;
@@ -191,14 +245,32 @@ export default function SettingsPage() {
                     {activeTab === "profile" && (
                         <div className="bg-white rounded-[2.5rem] p-8 shadow-sm flex flex-col items-center">
                             {/* Avatar Display */}
-                            <div className="w-24 h-24 rounded-full bg-gray-100 border-2 border-white shadow-sm mb-6 overflow-hidden flex items-center justify-center shrink-0">
-                                {profileData.profilePicture ? (
-                                    <img src={profileData.profilePicture} alt="Profile" className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full bg-[#ffc107]/10 flex items-center justify-center text-[#ffc107] font-bold text-xl">
-                                        {profileData.displayName?.charAt(0) || "U"}
-                                    </div>
-                                )}
+                            <div className="relative group">
+                                <div className="w-24 h-24 rounded-full bg-gray-100 border-2 border-white shadow-sm mb-6 overflow-hidden flex items-center justify-center shrink-0">
+                                    {uploading ? (
+                                        <div className="animate-pulse bg-gray-200 w-full h-full" />
+                                    ) : profileData.profilePicture ? (
+                                        <img src={profileData.profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-[#ffc107]/10 flex items-center justify-center text-[#ffc107] font-bold text-xl">
+                                            {profileData.displayName?.charAt(0) || "U"}
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploading}
+                                    className="absolute bottom-6 right-0 w-8 h-8 bg-black text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition-transform active:scale-95 disabled:opacity-50"
+                                >
+                                    <HugeiconsIcon icon={Camera01Icon} className="w-4 h-4" />
+                                </button>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleImageUpload}
+                                    className="hidden"
+                                    accept="image/*"
+                                />
                             </div>
 
                             <div className="w-full flex gap-4 mb-4">

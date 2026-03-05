@@ -14,12 +14,13 @@ import {
     Attachment01Icon,
     ArrowLeft01Icon,
     Cancel01Icon,
-    Delete02Icon
+    Delete02Icon,
+    Alert01Icon
 } from "@hugeicons/core-free-icons";
 import AutoPauseVideo from "@/components/ui/AutoPauseVideo";
 
 export default function DedicatedFeedPage() {
-    const { showToast, confirmAction, showImage } = useUI();
+    const { showToast, confirmAction, openReportModal } = useUI();
     const [posts, setPosts] = useState([]);
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -291,6 +292,14 @@ export default function DedicatedFeedPage() {
         }
     };
 
+    const handleReportPost = async (post) => {
+        openReportModal({
+            item_id: post.id,
+            item_type: 'feed',
+            onSuccess: () => setOpenMenuId(null)
+        });
+    };
+
     const formatDate = (dateString) => {
         const date = new Date(dateString);
         const now = new Date();
@@ -443,7 +452,11 @@ export default function DedicatedFeedPage() {
                                                         Delete Post
                                                     </button>
                                                 ) : (
-                                                    <button className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold text-gray-400 cursor-not-allowed">
+                                                    <button
+                                                        onClick={() => handleReportPost(post)}
+                                                        className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold text-orange-600 hover:bg-orange-50 transition-colors"
+                                                    >
+                                                        <HugeiconsIcon icon={Alert01Icon} className="w-4 h-4" strokeWidth={2} />
                                                         Report Post
                                                     </button>
                                                 )}

@@ -3,10 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-export default function InternshipsPage() {
+export default function ScholarshipsPage() {
     const router = useRouter();
     useEffect(() => {
-        router.replace("/dashboard");
+        router.replace("/admin");
     }, [router]);
     return null;
 }

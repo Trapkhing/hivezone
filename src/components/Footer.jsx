@@ -22,8 +22,10 @@ const Footer = () => {
                 <div className="flex-1 flex justify-center text-gray-400 text-sm font-light">
                     <span>© {currentYear} HiveZone</span>
                 </div>
-                <div className="flex-1 flex justify-end gap-2 text-gray-400 text-sm font-light">
+                <div className="flex-1 flex justify-end gap-4 text-gray-400 text-sm font-light">
                     <a href="/about" className="hover:opacity-70 transition-opacity">About</a>
+                    <a href="/support" className="hover:opacity-70 transition-opacity">Support</a>
+                    <a href="/contact" className="hover:opacity-70 transition-opacity">Contact</a>
                     <a href="/privacy" className="hover:opacity-70 transition-opacity">Privacy</a>
                     <a href="/terms" className="hover:opacity-70 transition-opacity">Terms</a>
                 </div>

@@ -323,16 +323,18 @@ export default function GigsPage() {
                                     View Details
                                 </Link>
                                 {gig.author?.id !== currentUserId && (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            router.push(`/dashboard/chat/new?user=${gig.author.id}&gig=${gig.id}`);
-                                        }}
-                                        className="w-12 h-12 bg-white flex items-center justify-center rounded-full hover:bg-gray-50 transition-colors shadow-sm border border-gray-100 shrink-0"
-                                        title="Book Gig"
-                                    >
-                                        <HugeiconsIcon icon={Message01Icon} className="w-5 h-5 text-gray-700" />
-                                    </button>
+                                    <>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                router.push(`/dashboard/chat/new?user=${gig.author.id}&gig=${gig.id}`);
+                                            }}
+                                            className="w-12 h-12 bg-white flex items-center justify-center rounded-full hover:bg-gray-50 transition-colors shadow-sm border border-gray-100 shrink-0"
+                                            title="Book Gig"
+                                        >
+                                            <HugeiconsIcon icon={Message01Icon} className="w-5 h-5 text-gray-700" />
+                                        </button>
+                                    </>
                                 )}
                             </div>
                         </div>
