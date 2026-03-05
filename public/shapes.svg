@@ -24,6 +24,8 @@
 <line y1="-1.5" x2="20.025" y2="-1.5" transform="matrix(0 -1 -1 0 286.023 720.012)" stroke="#FFC107" stroke-width="3"/>
 <line y1="-1.5" x2="19.3985" y2="-1.5" transform="matrix(-0.779871 -0.62594 -0.62594 0.779871 443.523 645)" stroke="#FFC107" stroke-width="3"/>
 <line y1="-1.5" x2="24.9602" y2="-1.5" transform="matrix(-0.866025 -0.5 -0.5 0.866025 445.554 339.946)" stroke="#FFC107" stroke-width="3"/>
+<line x1="429.705" y1="480.059" x2="451.705" y2="465.743" stroke="#FFC107" stroke-width="3"/>
+<line x1="287.023" y1="406" x2="287.023" y2="389" stroke="#FFC107" stroke-width="3"/>
 <defs>
 <filter id="filter0_d_197_25" x="308.159" y="460.713" width="575.813" height="496.275" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
 <feFlood flood-opacity="0" result="BackgroundImageFix"/>

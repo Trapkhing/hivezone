@@ -6,7 +6,7 @@ export default function NotFound() {
     return (
         <div className="min-h-screen bg-[#fcf6de] flex flex-col items-center justify-center p-6 text-center">
             <div className="mb-8">
-                <Image src="/logo.svg" alt="HiveZone Logo" width={180} height={50} className="mx-auto" />
+                <Image src="/logo.svg" alt="HiveZone Logo" width={180} height={50} priority className="mx-auto" />
             </div>
 
             <h1 className="text-[120px] font-black font-newyork text-[#ffc107] leading-none mb-4 -mt-4 drop-shadow-sm">

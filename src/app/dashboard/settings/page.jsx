@@ -5,15 +5,13 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useUI } from "@/components/ui/UIProvider";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
+import { AlertIcon, ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 
 // Menu items based on the user's design image
 const menuItems = [
     { id: "profile", label: "Edit Profile" },
     { id: "password", label: "Change Password" },
-    { id: "notifications", label: "Notification Preferences" },
-    { id: "privacy", label: "Show Profile Publicly" },
     { id: "delete", label: "Delete Account", isDestructive: true }
 ];
 
@@ -235,7 +233,7 @@ export default function SettingsPage() {
                             </div>
 
                             <p className="w-full text-[11px] text-gray-500 font-medium mb-6">
-                                Add some few lines about yourself. Choose who can see your bio in <span className="text-[#ffc107] cursor-pointer hover:underline" onClick={() => setActiveTab('privacy')}>Settings</span>.
+                                Add a few lines about yourself to help people get to know you better.
                             </p>
 
                             <button
@@ -291,65 +289,25 @@ export default function SettingsPage() {
                         </div>
                     )}
 
-                    {/* View: Privacy / Bio Visibility */}
-                    {activeTab === "privacy" && (
-                        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm flex flex-col w-full">
-                            <h3 className="text-[15px] font-extrabold text-gray-900 mb-4 tracking-tight">Who can see my bio?</h3>
+                    {/* Views for notifications and privacy are removed for now */}
 
-                            <div className="flex flex-col gap-4 mb-4">
-                                <label className="flex items-center justify-between cursor-pointer group">
-                                    <span className="text-[14px] font-medium text-gray-800 group-hover:text-black">Everybody</span>
-                                    <input
-                                        type="radio"
-                                        name="bioVisibility"
-                                        className="w-4 h-4 accent-[#ffc107] cursor-pointer"
-                                        checked={bioVisibility === "everybody"}
-                                        onChange={() => setBioVisibility("everybody")}
-                                    />
-                                </label>
-                                <label className="flex items-center justify-between cursor-pointer group">
-                                    <span className="text-[14px] font-medium text-gray-800 group-hover:text-black">My Contacts</span>
-                                    <input
-                                        type="radio"
-                                        name="bioVisibility"
-                                        className="w-4 h-4 accent-[#ffc107] cursor-pointer"
-                                        checked={bioVisibility === "contacts"}
-                                        onChange={() => setBioVisibility("contacts")}
-                                    />
-                                </label>
-                                <label className="flex items-center justify-between cursor-pointer group">
-                                    <span className="text-[14px] font-medium text-gray-800 group-hover:text-black">Nobody</span>
-                                    <input
-                                        type="radio"
-                                        name="bioVisibility"
-                                        className="w-4 h-4 accent-[#ffc107] cursor-pointer"
-                                        checked={bioVisibility === "nobody"}
-                                        onChange={() => setBioVisibility("nobody")}
-                                    />
-                                </label>
+                    {/* View: Delete Account (Beta Message) */}
+                    {activeTab === "delete" && (
+                        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm flex flex-col items-center justify-center min-h-[300px] text-center">
+                            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+                                <HugeiconsIcon icon={AlertIcon} className="w-8 h-8 text-red-500 rotate-180" />
                             </div>
-
-                            <p className="text-[11px] text-gray-500 font-medium mb-8">
-                                You can add users or entire groups that will not see your bio.
-                            </p>
-
-                            <h3 className="text-[13px] font-extrabold text-gray-900 mb-3 tracking-tight">Add Exceptions</h3>
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-[14px] font-medium text-gray-800">Never Share With</span>
-                                <button className="text-[14px] font-bold text-[#ffc107] hover:text-[#ffca2c] transition-colors">
-                                    Add Users
-                                </button>
-                            </div>
-                            <p className="text-[11px] text-gray-500 font-medium">
-                                You can restrict who can see the bio on your profile with granular precision.
+                            <h3 className="text-xl font-black text-gray-900 mb-2 font-newyork">Delete Account</h3>
+                            <p className="text-gray-500 font-medium text-sm max-w-xs">
+                                This feature is not available in beta right now. Please contact support if you need to deactivate your account.
                             </p>
                         </div>
                     )}
 
                     {/* View: Settings Placeholder */}
-                    {(activeTab !== "profile" && activeTab !== "password" && activeTab !== "privacy") && (
+                    {(activeTab !== "profile" && activeTab !== "password" && activeTab !== "delete") && (
                         <div className="bg-white rounded-[2.5rem] p-8 shadow-sm flex flex-col w-full min-h-[200px] items-center justify-center">
-                            <p className="text-gray-500 font-medium text-sm">Additional settings go here.</p>
+                            <p className="text-gray-500 font-medium text-sm">Select an option from the menu.</p>
                         </div>
                     )}
 

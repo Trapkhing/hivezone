@@ -26,16 +26,19 @@ const WelcomeBanner = ({ firstName, email }) => {
                 </div>
             </div>
 
+            {/* 
             <button className="mt-2 w-full sm:w-auto bg-[#ffc107] hover:bg-[#ffca2c] text-black font-semibold text-[14px] sm:text-[15px] py-3.5 px-6 rounded-full flex items-center justify-center sm:justify-start gap-2 transition-colors shadow-sm group">
-                Pick up from where you left
+                Start Buzzing
                 <Image
                     src="/icons/rightarrow.svg"
                     alt="Arrow"
                     width={20}
                     height={20}
+                    style={{ width: '20px', height: '20px' }}
                     className="transition-transform group-hover:translate-x-1 invert"
                 />
             </button>
+            */}
         </div>
     );
 };

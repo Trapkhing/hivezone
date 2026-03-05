@@ -13,7 +13,6 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import {
     Mail01Icon,
     Search01Icon,
-    Moon02Icon,
     Notification01Icon,
     Settings01Icon,
     ArrowDown01Icon,
@@ -191,7 +190,7 @@ const Navbar = () => {
                 {/* Center: Logo */}
                 <button onClick={handleLogoClick} className="flex items-center justify-center absolute left-1/2 -translate-x-1/2 cursor-pointer transition-transform active:scale-95">
                     <div className="relative flex items-center gap-2">
-                        <Image src="/logo.svg" alt="HiveZone Logo" width={110} height={32} className="h-6 w-auto relative z-10" />
+                        <Image src="/logo.svg" alt="HiveZone Logo" width={110} height={32} priority className="h-6 w-auto relative z-10" />
                         <span className="absolute -top-1.5 -right-8 bg-black text-[#ffc107] text-[8px] font-bold px-1.5 py-0.5 rounded-[3px] tracking-widest shadow-sm rotate-12">
                             BETA
                         </span>
@@ -210,7 +209,7 @@ const Navbar = () => {
             <div className="hidden md:flex items-center justify-between w-full">
                 {/* Far Left: Logo with Beta Tag */}
                 <button onClick={handleLogoClick} className="flex items-center gap-2 relative cursor-pointer transition-transform active:scale-95">
-                    <Image src="/logo.svg" alt="HiveZone Logo" width={140} height={40} className="h-8 w-auto relative z-10" />
+                    <Image src="/logo.svg" alt="HiveZone Logo" width={140} height={40} priority className="h-8 w-auto relative z-10" />
                     <span className="absolute -top-2 -right-10 bg-black text-[#ffc107] text-[10px] font-bold px-2 py-0.5 rounded-[4px] tracking-widest shadow-sm rotate-12">
                         BETA
                     </span>
@@ -254,10 +253,6 @@ const Navbar = () => {
 
                 {/* Right Box */}
                 <div className="flex items-center gap-4">
-                    {/* Moon */}
-                    <button className="w-11 h-11 bg-white border border-gray-300 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50">
-                        <HugeiconsIcon icon={Moon02Icon} className="w-[22px] h-[22px]" strokeWidth={1.5} />
-                    </button>
 
                     {/* Notification Widget Container */}
                     <div className="relative" ref={notifRef}>

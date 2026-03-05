@@ -133,10 +133,10 @@ const MentalAlleviationPage = () => {
                         </div>
                     </section>
 
-                    {/* Feature Cards */}
+                    {/* Feature Cards 
                     <section className="w-full py-6 md:py-10 flex justify-center">
                         <div className="w-[85%] md:w-[70%] space-y-6 md:space-y-8">
-                            {/* AI-guided reflection prompts */}
+                            
                             <div className="rounded-[2rem] bg-[#f0ce5e] p-6 md:p-8 min-h-[260px] md:min-h-[340px] flex flex-col items-center justify-between">
                                 <div className="relative w-[70%] aspect-[4/3] rounded-[1.5rem] overflow-hidden mb-4">
                                     <Image
@@ -153,7 +153,7 @@ const MentalAlleviationPage = () => {
                                 </p>
                             </div>
 
-                            {/* Daily motion feed */}
+                            
                             <div className="rounded-[2rem] bg-[#f0ce5e] p-6 md:p-8 min-h-[260px] md:min-h-[340px] flex flex-col items-center justify-between">
                                 <div className="relative w-[70%] aspect-[4/3] rounded-[1.5rem] overflow-hidden mb-4">
                                     <Image
@@ -170,7 +170,7 @@ const MentalAlleviationPage = () => {
                                 </p>
                             </div>
 
-                            {/* Peer support moderators */}
+                            
                             <div className="rounded-[2rem] bg-[#f0ce5e] p-6 md:p-8 min-h-[260px] md:min-h-[340px] flex flex-col items-center justify-between">
                                 <div className="relative w-[70%] aspect-[4/3] rounded-[1.5rem] overflow-hidden mb-4">
                                     <Image
@@ -187,7 +187,7 @@ const MentalAlleviationPage = () => {
                                 </p>
                             </div>
                         </div>
-                    </section>
+                    </section>*/}
 
                 </div>
                 <FeatureNavigation

@@ -188,7 +188,10 @@ export default function GigsPage() {
                             </div>
                         </div>
                     ) : gigs.length > 0 ? (
-                        <div className="bg-[#fcfcfc] border-2 border-[#ffc107] rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 w-full max-w-[450px] shadow-sm relative z-10">
+                        <div
+                            onClick={() => router.push(`/dashboard/gigs/detail?id=${gigs[0].id}`)}
+                            className="bg-[#fcfcfc] border-2 border-[#ffc107] rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 w-full max-w-[450px] shadow-sm relative z-10 cursor-pointer group"
+                        >
                             <div className="flex flex-col sm:flex-row gap-4 sm:gap-4 items-start sm:items-start">
                                 <div className="flex sm:flex-col items-center sm:items-center gap-3 sm:gap-2 w-full sm:w-[72px] shrink-0 border-b sm:border-b-0 border-gray-100 pb-3 sm:pb-0">
                                     <div className="w-12 h-12 sm:w-[72px] sm:h-[72px] rounded-full object-cover shadow-sm border border-gray-100 overflow-hidden relative">
@@ -200,14 +203,14 @@ export default function GigsPage() {
                                     </div>
                                     <div className="flex flex-col text-[11px] sm:text-[10px] text-gray-500 font-medium leading-tight text-left sm:text-center mt-0 sm:mt-1">
                                         <div className="flex items-center gap-1.5 sm:flex-col sm:gap-1">
+                                            <HugeiconsIcon icon={Location01Icon} className="w-4 h-4" />
                                             <span className="mt-0 sm:mt-1 font-bold text-gray-700">{gigs[0].location}</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div
-                                    onClick={() => router.push(`/dashboard/gigs/detail?id=${gigs[0].id}`)}
-                                    className="flex flex-col flex-1 pl-0 sm:pl-3 w-full cursor-pointer group"
+                                    className="flex flex-col flex-1 pl-0 sm:pl-3 w-full"
                                 >
                                     <div className="flex justify-between items-start w-full">
                                         <div className="flex items-center gap-1.5 mt-1 sm:mt-3">

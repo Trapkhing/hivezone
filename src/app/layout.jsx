@@ -29,6 +29,7 @@ const manyto = localFont({
 });
 
 export const metadata = {
+  metadataBase: new URL("http://localhost:3000"), // Will resolve according to environment
   title: "HiveZone | Your Campus Hub",
   description: "Connect with peers, find gigs, discover internships, and thrive in your campus zone.",
   applicationName: "HiveZone",
@@ -37,7 +38,7 @@ export const metadata = {
   openGraph: {
     title: "HiveZone | Your Campus Hub",
     description: "Your campus, your zone, your hive. Connect with peers, find gigs, and thrive.",
-    url: "https://campushive.com", // Example URL, will configure ENV later
+    url: "https://hivezone.vercel.app",
     siteName: "HiveZone",
     images: [
       {

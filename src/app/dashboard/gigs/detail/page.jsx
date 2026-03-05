@@ -32,6 +32,7 @@ function GigDetailContent() {
     const [loading, setLoading] = useState(true);
     const [currentUserId, setCurrentUserId] = useState(null);
     const [showMenu, setShowMenu] = useState(false);
+    const [imageError, setImageError] = useState(false);
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -176,7 +177,7 @@ function GigDetailContent() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-[#fcf6de] p-4 sm:p-8 pt-0 gap-6 max-w-[1000px] mx-auto w-full">
+        <div className="flex flex-col bg-[#fcf6de] p-4 sm:p-8 pt-0 gap-6 max-w-[1000px] mx-auto w-full">
 
             {/* Header / Nav */}
             <div className="flex items-center justify-between mt-4 relative">
@@ -219,7 +220,7 @@ function GigDetailContent() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 mt-2">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 mt-2 items-start">
 
                 {/* Left Column: Gig Insights */}
                 <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-gray-100 flex flex-col gap-6">
@@ -247,15 +248,21 @@ function GigDetailContent() {
                     </div>
 
                     {/* Image Display */}
-                    {gig.image_url && (
-                        <div className="w-full h-[400px] bg-gray-100 rounded-[1.5rem] border border-gray-200 flex items-center justify-center mt-2 overflow-hidden shadow-sm">
-                            <img
-                                src={gig.image_url}
-                                alt="Gig Reference"
-                                className="w-full h-full object-cover transition-transform hover:scale-[1.02] duration-500"
-                            />
-                        </div>
-                    )}
+                    {gig.image_url &&
+                        typeof gig.image_url === 'string' &&
+                        gig.image_url.trim() !== "" &&
+                        gig.image_url !== "null" &&
+                        gig.image_url !== "undefined" &&
+                        !imageError && (
+                            <div className="w-full h-[400px] bg-gray-100 rounded-[1.5rem] border border-gray-200 flex items-center justify-center my-6 overflow-hidden shadow-sm">
+                                <img
+                                    src={gig.image_url}
+                                    alt="Gig Reference"
+                                    className="w-full h-full object-cover transition-transform hover:scale-[1.02] duration-500"
+                                    onError={() => setImageError(true)}
+                                />
+                            </div>
+                        )}
                 </div>
 
                 {/* Right Column: Checkout & Author */}
