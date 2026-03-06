@@ -28,6 +28,24 @@ const ReportModal = ({ item_id, item_type, onClose, onSuccess, showToast }) => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Not authenticated");
 
+            // Check if user has already reported this specific item of this type
+            // Using .limit(1) instead of .maybeSingle() to avoid PGRST116 if multiple duplicates already exist
+            const { data: existingReports, error: checkError } = await supabase
+                .from('reports')
+                .select('id')
+                .eq('reporter_id', session.user.id)
+                .eq('item_id', item_id)
+                .eq('item_type', item_type)
+                .limit(1);
+
+            if (checkError) console.error("Duplicate check error:", checkError);
+
+            if (existingReports && existingReports.length > 0) {
+                showToast("You have already reported this item.", "warning");
+                onClose();
+                return;
+            }
+
             const { error } = await supabase
                 .from('reports')
                 .insert([{
@@ -39,13 +57,16 @@ const ReportModal = ({ item_id, item_type, onClose, onSuccess, showToast }) => {
                     status: 'pending'
                 }]);
 
-            if (error) throw error;
+            if (error) {
+                console.error("Report insert error:", error.message, "| code:", error.code, "| details:", error.details, "| hint:", error.hint);
+                throw error;
+            }
 
             showToast("Report submitted. Thank you for keeping HiveZone safe!");
             onSuccess?.();
             onClose();
         } catch (error) {
-            console.error("Error submitting report:", error);
+            console.error("Error submitting report:", error?.message || error);
             showToast("Failed to submit report. Please try again.", "error");
         } finally {
             setIsSubmitting(false);

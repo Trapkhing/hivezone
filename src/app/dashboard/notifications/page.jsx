@@ -112,7 +112,7 @@ const MobileNotificationsPage = () => {
                         <div className="flex-1 min-w-0 flex flex-col pt-0.5">
                             <div className="flex justify-between items-start gap-2">
                                 <p className="text-[14px] font-bold text-gray-900 truncate leading-tight">
-                                    {notif.actor?.computedName || "Someone"}
+                                    {notif.actor?.computedName || "User"}
                                 </p>
                                 <button
                                     onClick={(e) => handleDelete(e, notif.id)}

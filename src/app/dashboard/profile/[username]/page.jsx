@@ -4,10 +4,11 @@ import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { LinkSquare02Icon } from "@hugeicons/core-free-icons";
+import { LinkSquare02Icon, Flag01Icon } from "@hugeicons/core-free-icons";
 import { ProfileSkeleton } from "@/components/ui/Skeleton";
 import Avatar from "@/components/ui/Avatar";
 import { getDisplayName } from "@/utils/stringUtils";
+import { useUI } from "@/components/ui/UIProvider";
 
 export default function PublicProfilePage() {
     const router = useRouter();
@@ -16,6 +17,7 @@ export default function PublicProfilePage() {
     const [loading, setLoading] = useState(true);
     const [notFound, setNotFound] = useState(false);
     const [currentUserId, setCurrentUserId] = useState(null);
+    const { openReportModal } = useUI();
 
     const supabase = createClient();
 
@@ -131,8 +133,8 @@ export default function PublicProfilePage() {
                             </div>
                         </div>
 
-                        {/* Top row: Message Button aligned to the right */}
-                        <div className="w-full flex justify-end pt-3 md:pt-6">
+                        {/* Top row: Message + Report buttons */}
+                        <div className="w-full flex justify-end items-center gap-2 pt-3 md:pt-6">
                             <button
                                 onClick={() => {
                                     router.push(`/dashboard/chat/new?user=${profile.id}`);
@@ -140,6 +142,13 @@ export default function PublicProfilePage() {
                                 className="px-4 py-1.5 md:px-6 md:py-2 rounded-full border border-gray-300 md:border-[#ffc107] bg-white md:bg-[#ffc107] text-gray-900 md:text-black font-bold text-[13px] md:text-[15px] hover:bg-gray-50 md:hover:bg-[#ffb300] transition-colors shadow-sm"
                             >
                                 Message
+                            </button>
+                            <button
+                                onClick={() => openReportModal({ item_id: profile.id, item_type: 'user' })}
+                                className="p-2 rounded-full border border-gray-200 hover:border-red-300 hover:bg-red-50 text-gray-400 hover:text-red-400 transition-colors"
+                                title="Report user"
+                            >
+                                <HugeiconsIcon icon={Flag01Icon} size={16} />
                             </button>
                         </div>
 
@@ -159,6 +168,9 @@ export default function PublicProfilePage() {
                                 <div className="flex flex-col text-[13px] text-gray-600 font-medium mt-3 gap-0.5">
                                     <span>{profile?.institution || "Institution not provided"}</span>
                                     <span>{profile?.programme || "Programme not provided"}</span>
+                                    {profile?.year_of_study && (
+                                        <span>{profile.year_of_study}</span>
+                                    )}
                                 </div>
 
                                 <p className="text-[13px] text-gray-600 font-medium mt-4 leading-relaxed pr-8">

@@ -30,7 +30,7 @@ export default function ChatWindowPage() {
     const [loading, setLoading] = useState(true);
     const scrollRef = useRef(null);
     const supabase = createClient();
-    const { confirmAction, showToast } = useUI();
+    const { confirmAction, showToast, openReportModal } = useUI();
     const { setActiveConversation, refreshUnreadCount } = useChatConfig();
 
     // Register this chat as the active conversation so the global provider
@@ -235,6 +235,7 @@ export default function ChatWindowPage() {
         }
     };
 
+
     const handleDeleteMessage = async (msgId) => {
         confirmAction({
             title: "Delete message",
@@ -354,8 +355,12 @@ export default function ChatWindowPage() {
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <button className="p-2.5 hover:bg-gray-50 rounded-full transition-colors">
-                                <HugeiconsIcon icon={InformationCircleIcon} size={20} className="text-gray-400" />
+                            <button
+                                onClick={() => openReportModal({ item_id: id, item_type: 'conversation' })}
+                                className="p-2.5 hover:bg-red-50 rounded-full transition-colors group"
+                                title="Report user"
+                            >
+                                <HugeiconsIcon icon={InformationCircleIcon} size={20} className="text-gray-400 group-hover:text-red-400 transition-colors" />
                             </button>
                         </div>
                     </div>
@@ -464,5 +469,6 @@ export default function ChatWindowPage() {
 
             </div>
         </div>
+
     );
 }

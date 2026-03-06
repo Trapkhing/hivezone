@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import Toast from './Toast';
+import { Toaster, toast } from 'react-hot-toast';
 import ConfirmModal from './ConfirmModal';
 import ImageModal from './ImageModal';
 import ReportModal from './ReportModal';
@@ -18,19 +18,28 @@ export const useUI = () => {
 };
 
 export const UIProvider = ({ children }) => {
-    const [toasts, setToasts] = useState([]);
     const [confirmData, setConfirmData] = useState(null);
     const [fullScreenImage, setFullScreenImage] = useState(null);
     const [reportData, setReportData] = useState(null);
 
     const showToast = useCallback((message, type = 'success') => {
-        const id = Math.random().toString(36).substr(2, 9);
-        setToasts((prev) => [...prev, { id, message, type }]);
-
-        // Auto remove after 4 seconds
-        setTimeout(() => {
-            setToasts((prev) => prev.filter((t) => t.id !== id));
-        }, 4000);
+        if (type === 'error') {
+            toast.error(message);
+        } else if (type === 'loading') {
+            toast.loading(message);
+        } else if (type === 'warning') {
+            toast(message, {
+                icon: '⚠️',
+                style: {
+                    border: '1px solid #eebd29ff',
+                    padding: '16px',
+                    color: '#c4b587ff',
+                    background: '#fdfcf8ff',
+                },
+            });
+        } else {
+            toast.success(message);
+        }
     }, []);
 
     const confirmAction = useCallback((data) => {
@@ -59,26 +68,30 @@ export const UIProvider = ({ children }) => {
         setReportData(data);
     }, []);
 
-    const removeToast = useCallback((id) => {
-        setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, []);
-
     return (
         <UIContext.Provider value={{ showToast, confirmAction, showImage, openReportModal }}>
             {children}
 
-            {/* Toast Container */}
-            <div className="fixed top-4 sm:top-auto sm:bottom-6 left-0 right-0 sm:left-auto sm:right-6 z-[9999] flex flex-col items-center sm:items-end gap-3 pointer-events-none w-full sm:max-w-[400px] px-4 sm:px-0">
-                <AnimatePresence mode="popLayout">
-                    {toasts.map((toast) => (
-                        <Toast
-                            key={toast.id}
-                            {...toast}
-                            onClose={() => removeToast(toast.id)}
-                        />
-                    ))}
-                </AnimatePresence>
-            </div>
+            {/* React Hot Toast */}
+            <Toaster
+                position="top-center"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        fontFamily: 'inherit',
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        borderRadius: '10px',
+                        padding: '12px 16px',
+                    },
+                    success: {
+                        iconTheme: { primary: '#0ca120ff', secondary: '#f8f3f3ff' },
+                    },
+                    error: {
+                        iconTheme: { primary: '#e71d1dff', secondary: '#f8f3f3ff' },
+                    },
+                }}
+            />
 
             {/* Confirm Modal */}
             <AnimatePresence>

@@ -6,7 +6,7 @@
  * @param {string} fallback - The final string to display if all else fails (e.g., "Someone", "?")
  * @returns {string} The resolved display string
  */
-export const getDisplayName = (user, fallback = "Someone") => {
+export const getDisplayName = (user, fallback = "User") => {
     if (!user) return fallback;
 
     // 1. Direct Display Name
@@ -16,7 +16,6 @@ export const getDisplayName = (user, fallback = "Someone") => {
 
     // 2. First Name Fallback
     const hasFirstName = user.first_name && user.first_name.trim() !== "";
-
     if (hasFirstName) {
         return user.first_name.trim();
     }

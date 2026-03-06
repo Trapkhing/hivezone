@@ -10,7 +10,10 @@ import {
     MoreHorizontalIcon,
     ViewIcon,
     Megaphone03Icon,
-    Loading03Icon
+    Loading03Icon,
+    MessageMultiple01Icon,
+    UserIcon,
+    Flag01Icon
 } from "@hugeicons/core-free-icons";
 import { createClient } from "@/utils/supabase/client";
 import { useUI } from "@/components/ui/UIProvider";
@@ -80,8 +83,23 @@ export default function ReportsManagement() {
     };
 
     const handleDeleteContent = async (report) => {
+        // For user reports, we only resolve — we don't delete the user
+        if (report.item_type === 'user') {
+            confirmAction({
+                title: "Resolve User Report?",
+                message: "This will mark the report as resolved. To ban the user, do so from the Users manager.",
+                confirmText: "Resolve",
+                type: "warning",
+                onConfirm: () => handleStatusUpdate(report.id, 'resolved')
+            });
+            return;
+        }
+
+        const label = report.item_type === 'gig' ? 'Gig' :
+            report.item_type === 'conversation' ? 'Conversation' : 'Post';
+
         const confirmed = await confirmAction({
-            title: `Delete Reported ${report.item_type === 'gig' ? 'Gig' : 'Post'}?`,
+            title: `Delete Reported ${label}?`,
             message: `This will permanently remove the reported ${report.item_type} and mark the report as resolved.`,
             confirmText: "Delete Content",
             type: "danger"
@@ -90,9 +108,9 @@ export default function ReportsManagement() {
         if (!confirmed) return;
 
         try {
-            const table = report.item_type === 'gig' ? 'gigs' : 'feeds';
+            const table = report.item_type === 'gig' ? 'gigs' :
+                report.item_type === 'conversation' ? 'conversations' : 'feeds';
 
-            // 1. Delete the content
             const { error: deleteError } = await supabase
                 .from(table)
                 .delete()
@@ -100,9 +118,7 @@ export default function ReportsManagement() {
 
             if (deleteError) throw deleteError;
 
-            // 2. Resolve the report
             await handleStatusUpdate(report.id, 'resolved');
-
             showToast("Content deleted and report resolved.");
         } catch (error) {
             console.error("Error deleting content:", error);
@@ -170,12 +186,24 @@ export default function ReportsManagement() {
                                     <tr key={report.id} className="hover:bg-gray-50/50 transition-colors group">
                                         <td className="px-8 py-5">
                                             <div className="flex items-center gap-4">
-                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${report.item_type === 'gig' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
-                                                    <HugeiconsIcon icon={report.item_type === 'gig' ? Megaphone03Icon : ViewIcon} className="w-5 h-5" />
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${report.item_type === 'gig' ? 'bg-orange-50 text-orange-600' :
+                                                        report.item_type === 'conversation' ? 'bg-purple-50 text-purple-600' :
+                                                            report.item_type === 'user' ? 'bg-red-50 text-red-500' :
+                                                                'bg-blue-50 text-blue-600'
+                                                    }`}>
+                                                    <HugeiconsIcon icon={
+                                                        report.item_type === 'gig' ? Megaphone03Icon :
+                                                            report.item_type === 'conversation' ? MessageMultiple01Icon :
+                                                                report.item_type === 'user' ? UserIcon :
+                                                                    ViewIcon
+                                                    } className="w-5 h-5" />
                                                 </div>
                                                 <div>
                                                     <p className="font-black text-sm break-all max-w-[200px] truncate" title={report.item_id}>
-                                                        {report.item_type === 'gig' ? 'Gig Listing' : 'Feed Post'}
+                                                        {report.item_type === 'gig' ? 'Gig Listing' :
+                                                            report.item_type === 'conversation' ? 'Conversation' :
+                                                                report.item_type === 'user' ? 'User Profile' :
+                                                                    'Feed Post'}
                                                     </p>
                                                     <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">#{report.item_id.substring(0, 8)}</span>
                                                 </div>
