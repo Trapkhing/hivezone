@@ -7,16 +7,14 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
     Home01Icon,
     Briefcase02Icon, // Representing Campus Gigs/Search
-    Notification01Icon,
+    Search01Icon,
     Mail01Icon,
 } from "@hugeicons/core-free-icons";
 import { useChatConfig } from "@/components/providers/ChatProvider";
-import { useNotifications } from "@/components/providers/NotificationProvider";
 
 const BottomNav = () => {
     const pathname = usePathname();
     const { unreadCount: chatUnreadCount } = useChatConfig();
-    const { unreadCount: notificationUnreadCount } = useNotifications();
 
     const tabs = [
         {
@@ -26,18 +24,16 @@ const BottomNav = () => {
             isActive: pathname === "/dashboard",
         },
         {
+            name: "Search",
+            href: "/dashboard/search",
+            icon: Search01Icon,
+            isActive: pathname.startsWith("/dashboard/search"),
+        },
+        {
             name: "Gigs",
             href: "/dashboard/gigs",
             icon: Briefcase02Icon,
-            isActive: pathname === "/dashboard/gigs",
-        },
-        {
-            name: "Notifications",
-            href: "/dashboard/notifications",
-            icon: Notification01Icon,
-            isActive: pathname.startsWith("/dashboard/notifications"),
-            hasBadge: notificationUnreadCount > 0,
-            badgeCount: notificationUnreadCount > 99 ? '99+' : notificationUnreadCount
+            isActive: pathname.startsWith("/dashboard/gigs"),
         },
         {
             name: "Messages",

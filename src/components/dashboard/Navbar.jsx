@@ -25,9 +25,11 @@ import {
 const Navbar = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
+    const [isMobileNotifOpen, setIsMobileNotifOpen] = useState(false);
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const dropdownRef = useRef(null);
     const notifRef = useRef(null);
+    const mobileNotifRef = useRef(null);
     const router = useRouter();
     const pathname = usePathname();
     const supabase = createClient();
@@ -50,6 +52,7 @@ const Navbar = () => {
 
     const handleNotificationClick = async (notif) => {
         setIsNotifOpen(false);
+        setIsMobileNotifOpen(false);
         if (!notif.is_read) {
             await markAsRead(notif.id);
         }
@@ -98,6 +101,9 @@ const Navbar = () => {
             }
             if (notifRef.current && !notifRef.current.contains(event.target)) {
                 setIsNotifOpen(false);
+            }
+            if (mobileNotifRef.current && !mobileNotifRef.current.contains(event.target)) {
+                setIsMobileNotifOpen(false);
             }
         };
 
@@ -200,10 +206,40 @@ const Navbar = () => {
 
 
 
-                {/* Right: Settings */}
-                <Link href="/dashboard/settings" className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm shrink-0">
-                    <HugeiconsIcon icon={Settings01Icon} className="w-[18px] h-[18px] text-gray-800" strokeWidth={1.5} />
-                </Link>
+                {/* Right: Settings and Notifications */}
+                <div className="flex items-center gap-2">
+                    {/* Mobile Notification Widget Container */}
+                    <div className="relative" ref={mobileNotifRef}>
+                        <div
+                            onClick={() => setIsMobileNotifOpen(!isMobileNotifOpen)}
+                            className={`relative w-9 h-9 bg-white border ${isMobileNotifOpen ? 'border-black' : 'border-gray-200'} rounded-full flex items-center justify-center shadow-sm cursor-pointer shrink-0`}
+                        >
+                            <HugeiconsIcon icon={Notification01Icon} className="w-[18px] h-[18px] text-gray-800" strokeWidth={1.5} />
+                            {notificationUnreadCount > 0 && (
+                                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 bg-[#ff3b30] text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white">
+                                    {notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}
+                                </span>
+                            )}
+                        </div>
+
+                        <NotificationDrawer
+                            isOpen={isMobileNotifOpen}
+                            onClose={() => setIsMobileNotifOpen(false)}
+                            notifications={notifications}
+                            unreadCount={notificationUnreadCount}
+                            markAsRead={markAsRead}
+                            markAllAsRead={markAllAsRead}
+                            deleteNotification={deleteNotification}
+                            clearAllNotifications={clearAllNotifications}
+                            formatTimeAgo={formatTimeAgo}
+                            getActionText={getActionText}
+                        />
+                    </div>
+
+                    <Link href="/dashboard/settings" className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm shrink-0">
+                        <HugeiconsIcon icon={Settings01Icon} className="w-[18px] h-[18px] text-gray-800" strokeWidth={1.5} />
+                    </Link>
+                </div>
             </div>
 
             {/* --- DESKTOP NAVIGATION --- */}
@@ -250,6 +286,13 @@ const Navbar = () => {
                             onClick={triggerSearch}
                         />
                     </div>
+
+                    {/* Admin Button */}
+                    {profile?.is_admin && (
+                        <Link href="/admin" className="px-5 py-2 h-11 bg-black text-[#ffc107] rounded-full text-[15px] font-bold shadow-sm hover:bg-gray-900 transition-colors flex items-center justify-center shrink-0">
+                            Admin
+                        </Link>
+                    )}
                 </div>
 
                 {/* Right Box */}
@@ -357,12 +400,17 @@ const Navbar = () => {
                                 <span className="font-bold text-gray-900 text-[16px]">Profile</span>
                             </Link>
 
-                            <Link href="/dashboard/search" onClick={() => setIsMobileSidebarOpen(false)} className="px-4 py-3.5 rounded-2xl hover:bg-gray-50 flex items-center gap-4 transition-colors">
-                                <HugeiconsIcon icon={Search01Icon} className="w-[22px] h-[22px] text-gray-600" />
-                                <span className="font-bold text-gray-900 text-[16px]">Search Hive</span>
-                            </Link>
-
                             <div className="h-px bg-gray-100 my-2 mx-2"></div>
+
+                            {profile?.is_admin && (
+                                <>
+                                    <Link href="/admin" onClick={() => setIsMobileSidebarOpen(false)} className="px-4 py-3.5 rounded-2xl hover:bg-gray-50 flex items-center gap-4 transition-colors">
+                                        <HugeiconsIcon icon={Settings01Icon} className="w-[22px] h-[22px] text-gray-600" />
+                                        <span className="font-bold text-gray-900 text-[16px]">Admin Panel</span>
+                                    </Link>
+                                    <div className="h-px bg-gray-100 my-2 mx-2"></div>
+                                </>
+                            )}
 
                             <Link href="/dashboard/gigs" onClick={() => setIsMobileSidebarOpen(false)} className="px-4 py-3.5 rounded-2xl hover:bg-gray-50 flex items-center gap-4">
                                 <span className="font-bold text-gray-900 text-[16px]">Campus Gigs</span>
