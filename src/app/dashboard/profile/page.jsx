@@ -479,7 +479,7 @@ export default function ProfilePage() {
                             <img
                                 src={profile.cover_photo}
                                 alt="Cover Photo"
-                                className="w-full h-full object-cover object-center grayscale opacity-90 md:rounded-t-[2.5rem]"
+                                className="w-full h-full object-cover object-center md:rounded-t-[2.5rem]"
                             />
                         ) : (
                             <div className="w-full h-full bg-gray-200 md:rounded-t-[2.5rem]"></div>
