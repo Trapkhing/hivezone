@@ -435,6 +435,17 @@ export default function DedicatedFeedPage() {
                             entity_id: postId,
                             message: `liked your post`
                         });
+
+                        fetch('/api/notifications/send', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                userIds: [post.user_id],
+                                title: actorName,
+                                message: "liked your post",
+                                url: `${window.location.origin}/dashboard/feed`
+                            })
+                        }).catch(err => console.error("Push notification failed:", err));
                     }
                 }
             }
@@ -541,6 +552,17 @@ export default function DedicatedFeedPage() {
                             created_at: new Date().toISOString()
                         })
                         .eq('id', existingNotif.id);
+
+                    fetch('/api/notifications/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userIds: [post.user_id],
+                            title: actorName,
+                            message: `${message}\n"${content.trim()}"`,
+                            url: `${window.location.origin}/dashboard/feed`
+                        })
+                    }).catch(err => console.error("Push notification failed:", err));
                 } else {
                     const actorName = profile?.display_name || profile?.first_name || 'User';
                     await supabase.from('notifications').insert({
@@ -551,6 +573,17 @@ export default function DedicatedFeedPage() {
                         entity_id: postId,
                         message: `commented on your post`
                     });
+
+                    fetch('/api/notifications/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userIds: [post.user_id],
+                            title: actorName,
+                            message: `commented on your post\n"${content.trim()}"`,
+                            url: `${window.location.origin}/dashboard/feed`
+                        })
+                    }).catch(err => console.error("Push notification failed:", err));
                 }
             }
 

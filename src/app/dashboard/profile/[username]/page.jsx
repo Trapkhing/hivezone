@@ -166,6 +166,17 @@ export default function PublicProfilePage() {
                         entity_id: postId,
                         message: `liked your post`
                     });
+
+                    fetch('/api/notifications/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userIds: [post.user_id],
+                            title: currentUserProfile?.display_name || currentUserProfile?.first_name || 'User',
+                            message: "liked your post",
+                            url: `${window.location.origin}/dashboard/feed`
+                        })
+                    }).catch(err => console.error("Push notification failed:", err));
                 }
             }
         } catch (error) {
@@ -251,6 +262,17 @@ export default function PublicProfilePage() {
                     entity_id: postId,
                     message: `commented on your post`
                 });
+
+                fetch('/api/notifications/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userIds: [post.user_id],
+                        title: currentUserProfile?.display_name || currentUserProfile?.first_name || 'User',
+                        message: `commented on your post\n"${content.trim()}"`,
+                        url: `${window.location.origin}/dashboard/feed`
+                    })
+                }).catch(err => console.error("Push notification failed:", err));
             }
 
         } catch (error) {

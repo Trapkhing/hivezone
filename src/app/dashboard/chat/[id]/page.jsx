@@ -317,6 +317,20 @@ export default function ChatWindowPage() {
                     hidden_by: []
                 })
                 .eq('id', id);
+
+            // Trigger Push Notification
+            if (conversation?.otherUser?.id) {
+                fetch('/api/notifications/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userIds: [conversation.otherUser.id],
+                        title: currentUser.display_name || "New Message",
+                        message: content || (url ? "Sent an attachment" : "Sent a message"),
+                        url: `${window.location.origin}/dashboard/chat/${id}`
+                    })
+                }).catch(err => console.error("Notification trigger failed:", err));
+            }
         }
     };
 

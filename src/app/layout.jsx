@@ -65,10 +65,28 @@ export const metadata = {
 };
 
 import { UIProvider } from "@/components/ui/UIProvider";
+import Script from "next/script";
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+        <Script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" strategy="afterInteractive" />
+        <Script id="onesignal-init" strategy="afterInteractive">
+          {`
+            window.OneSignalDeferred = window.OneSignalDeferred || [];
+            OneSignalDeferred.push(async function(OneSignal) {
+              await OneSignal.init({
+                appId: "b9314dfb-651e-4f29-b1e9-c1f6f2300b0e",
+                allowLocalhostAsSecureOrigin: true,
+                notifyButton: {
+                  enable: true,
+                },
+              });
+            });
+          `}
+        </Script>
+      </head>
       <body
         className={`${newYork.variable} ${inter.variable} ${manyto.variable} antialiased`}
       >

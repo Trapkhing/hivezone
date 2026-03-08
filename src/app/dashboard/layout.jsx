@@ -3,11 +3,13 @@ import BottomNav from "@/components/dashboard/BottomNav";
 import ScrollToTop from "@/components/dashboard/ScrollToTop";
 import ChatProvider from "@/components/providers/ChatProvider";
 import NotificationProvider from "@/components/providers/NotificationProvider";
+import OneSignalInit from "@/components/OneSignalInit";
 
 export default function DashboardLayout({ children }) {
     return (
         <NotificationProvider>
             <ChatProvider>
+                <OneSignalInit />
                 <div className="min-h-screen bg-[#fcf6de] text-zinc-900 font-sans flex flex-col">
                     <ScrollToTop />
                     <Navbar />

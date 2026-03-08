@@ -113,7 +113,21 @@ function NewChatContent() {
                 });
             }
 
-            // 5. Seamlessly swap to the real chat page
+            // 5. Trigger Push Notification for the first message
+            if (otherUserId) {
+                fetch('/api/notifications/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userIds: [otherUserId],
+                        title: currentUser.display_name || "New Message",
+                        message: content,
+                        url: `${window.location.origin}/dashboard/chat/${conversationId}`
+                    })
+                }).catch(err => console.error("Notification trigger failed:", err));
+            }
+
+            // 6. Seamlessly swap to the real chat page
             router.replace(`/dashboard/chat/${conversationId}`);
         } catch (err) {
             console.error("Error creating conversation:", err);

@@ -152,17 +152,7 @@ export default function ProfilePage() {
             } else {
                 await supabase.from('feed_likes').insert([{ feed_id: postId, user_id: session.user.id }]);
 
-                // Notification logic
-                if (post.user_id !== session.user.id) {
-                    await supabase.from('notifications').insert({
-                        user_id: post.user_id,
-                        actor_id: session.user.id,
-                        type: 'like',
-                        entity_type: 'feed',
-                        entity_id: postId,
-                        message: `liked your post`
-                    });
-                }
+
             }
         } catch (error) {
             console.error("Error toggling like:", error);
@@ -240,18 +230,7 @@ export default function ProfilePage() {
                 p.id === postId ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p
             ));
 
-            // Notification logic
-            const post = userPosts.find(p => p.id === postId);
-            if (post && post.user_id !== session.user.id) {
-                await supabase.from('notifications').insert({
-                    user_id: post.user_id,
-                    actor_id: session.user.id,
-                    type: 'comment',
-                    entity_type: 'feed',
-                    entity_id: postId,
-                    message: `commented on your post`
-                });
-            }
+
 
         } catch (error) {
             console.error("Error posting comment:", error);
