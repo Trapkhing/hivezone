@@ -30,6 +30,7 @@ export default function DedicatedFeedPage() {
     const [loadingMore, setLoadingMore] = useState(false);
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
+    const [activeTab, setActiveTab] = useState('all'); // 'all' or 'trending'
     const limit = 20;
 
     const [postContent, setPostContent] = useState("");
@@ -44,63 +45,118 @@ export default function DedicatedFeedPage() {
     const fileInputRef = useRef(null);
     const supabase = createClient();
 
-
-    const fetchPosts = async (pageNumber = 0, isInitial = false, userInstitution = null) => {
+    const fetchPosts = async (pageNumber = 0, isInitial = false, tab = activeTab, userInstitution = null) => {
         try {
-            if (isInitial) setLoading(true);
-            else setLoadingMore(true);
+            if (isInitial) {
+                setLoading(true);
+                setPosts([]);
+            } else {
+                setLoadingMore(true);
+            }
 
-            // Use the passed userInstitution or fallback to the state
             const targetInstitution = userInstitution || profile?.institution;
-
-            // If we somehow still don't have an institution, just exit gracefully
             if (!targetInstitution) return;
 
-            const from = pageNumber * limit;
-            const to = from + limit - 1;
+            let finalPosts = [];
+            let moreAvailable = false;
 
-            const { data: feedsData, error } = await supabase
-                .from("feeds")
-                .select(`
-                    *,
-                    author:users!inner (
-                        display_name,
-                        username,
-                        profile_picture,
-                        is_verified,
-                        institution
-                    ),
-                    likes:feed_likes(user_id),
-                    comments:feed_comments(count)
-                `)
-                .eq('author.institution', targetInstitution)
-                .order('created_at', { ascending: false })
-                .range(from, to);
+            if (tab === 'trending') {
+                // For trending, we'll fetch a larger chunk of recent posts (e.g. 50-100) and take the top 30-40%
+                // Since this is front-end sorting, we'll just fetch a good chunk once if it's the initial load.
+                // Infinite scroll for trending is tricky without a DB view, so we'll just show the top ones.
 
-            if (error) throw error;
-
-            if (feedsData) {
-                const { data: { session } } = await supabase.auth.getSession();
-                const processed = feedsData.map(post => ({
-                    ...post,
-                    likes_count: post.likes?.length || 0,
-                    comments_count: post.comments?.[0]?.count || 0,
-                    is_liked: post.likes?.some(l => l.user_id === (profile?.id || session?.user?.id))
-                }));
-
-                if (isInitial) {
-                    setPosts(processed);
-                } else {
-                    setPosts(prev => [...prev, ...processed]);
+                if (pageNumber > 0) {
+                    // Trending won't support infinite scroll for now to ensure we show the absolute best
+                    setHasMore(false);
+                    setLoadingMore(false);
+                    return;
                 }
 
-                // If we got fewer records than the limit, we've reached the end
-                if (feedsData.length < limit) {
-                    setHasMore(false);
-                } else {
-                    setHasMore(true);
+                const { data: feedsData, error } = await supabase
+                    .from("feeds")
+                    .select(`
+                        *,
+                        author:users!inner (
+                            display_name,
+                            username,
+                            profile_picture,
+                            is_verified,
+                            institution
+                        ),
+                        likes:feed_likes(user_id),
+                        comments:feed_comments(count)
+                    `)
+                    .eq('author.institution', targetInstitution)
+                    .order('created_at', { ascending: false })
+                    .limit(100);
+
+                if (error) throw error;
+
+                if (feedsData) {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const processed = feedsData.map(post => ({
+                        ...post,
+                        likes_count: post.likes?.length || 0,
+                        comments_count: post.comments?.[0]?.count || 0,
+                        is_liked: post.likes?.some(l => l.user_id === (profile?.id || session?.user?.id))
+                    }));
+
+                    // Sort by total interactions descending
+                    processed.sort((a, b) => (b.likes_count + b.comments_count) - (a.likes_count + a.comments_count));
+
+                    // Take top 40% (at least a few if there are very few posts)
+                    const percentToTake = 0.4;
+                    const countToTake = Math.max(Math.ceil(processed.length * percentToTake), Math.min(processed.length, 5));
+
+                    finalPosts = processed.slice(0, countToTake);
+                    moreAvailable = false; // Trending is a one-off fetch for the top 40%
+                }
+
+            } else {
+                // Regular All Feeds chronological fetch
+                const from = pageNumber * limit;
+                const to = from + limit - 1;
+
+                const { data: feedsData, error } = await supabase
+                    .from("feeds")
+                    .select(`
+                        *,
+                        author:users!inner (
+                            display_name,
+                            username,
+                            profile_picture,
+                            is_verified,
+                            institution
+                        ),
+                        likes:feed_likes(user_id),
+                        comments:feed_comments(count)
+                    `)
+                    .eq('author.institution', targetInstitution)
+                    .order('created_at', { ascending: false })
+                    .range(from, to);
+
+                if (error) throw error;
+
+                if (feedsData) {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    finalPosts = feedsData.map(post => ({
+                        ...post,
+                        likes_count: post.likes?.length || 0,
+                        comments_count: post.comments?.[0]?.count || 0,
+                        is_liked: post.likes?.some(l => l.user_id === (profile?.id || session?.user?.id))
+                    }));
+
+                    moreAvailable = feedsData.length === limit;
                 }
             }
+
+            if (isInitial) {
+                setPosts(finalPosts);
+            } else {
+                setPosts(prev => [...prev, ...finalPosts]);
+            }
+            setHasMore(moreAvailable);
+
         } catch (error) {
             console.error("Error fetching feeds:", error);
             showToast("Failed to load feeds.", "error");
@@ -110,6 +166,7 @@ export default function DedicatedFeedPage() {
         }
     };
 
+    // Load initial data and profile
     useEffect(() => {
         const fetchInitialData = async () => {
             const { data: { session } } = await supabase.auth.getSession();
@@ -126,13 +183,24 @@ export default function DedicatedFeedPage() {
             }
 
             if (currentUserInstitution) {
-                await fetchPosts(0, true, currentUserInstitution);
+                // Always start with page 0, initial=true, tab=activeTab
+                await fetchPosts(0, true, activeTab, currentUserInstitution);
             } else {
                 setLoading(false);
             }
         };
         fetchInitialData();
-    }, [supabase]);
+    }, [supabase]); // Run once on mount to get profile
+
+
+    // Refetch when tab changes
+    useEffect(() => {
+        if (profile?.institution) {
+            setPage(0);
+            fetchPosts(0, true, activeTab, profile.institution);
+        }
+    }, [activeTab]);
+
 
     // Intersection Observer for Infinite Scroll
     const observerTarget = useRef(null);
@@ -140,10 +208,11 @@ export default function DedicatedFeedPage() {
     useEffect(() => {
         const observer = new IntersectionObserver(
             entries => {
-                if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+                // Only paginate for 'all' tab since 'trending' is a 1-page dump of top %
+                if (entries[0].isIntersecting && hasMore && !loading && !loadingMore && activeTab === 'all') {
                     setPage(prev => {
                         const nextPage = prev + 1;
-                        fetchPosts(nextPage, false);
+                        fetchPosts(nextPage, false, activeTab);
                         return nextPage;
                     });
                 }
@@ -160,16 +229,15 @@ export default function DedicatedFeedPage() {
                 observer.unobserve(observerTarget.current);
             }
         };
-    }, [hasMore, loading, loadingMore]);
+    }, [hasMore, loading, loadingMore, activeTab]);
 
     const handleMediaSelect = (e) => {
         const file = e.target.files[0];
         if (file) {
-            // Check size (30MB limit)
             const fileSizeMB = file.size / (1024 * 1024);
             if (fileSizeMB > 30) {
                 showToast("File size must be less than 30MB.", "error");
-                e.target.value = ""; // reset input
+                e.target.value = "";
                 return;
             }
 
@@ -193,7 +261,7 @@ export default function DedicatedFeedPage() {
             if (selectedMedia) {
                 const fileExt = selectedMedia.name.split('.').pop();
                 const fileName = `${session.user.id}-${Math.random()}.${fileExt}`;
-                const filePath = `post-media/${fileName}`; // Keep it all in the feed bucket under post-media
+                const filePath = `post-media/${fileName}`;
 
                 const { error: uploadError } = await supabase.storage
                     .from('feeds')
@@ -229,7 +297,14 @@ export default function DedicatedFeedPage() {
 
             if (postError) throw postError;
 
-            setPosts([newPost, ...posts]);
+            // Only add to top of list if we're on "all" tab.
+            // If on trending, a 0-interaction new post shouldn't appear at the top anyway.
+            if (activeTab === 'all') {
+                setPosts([{ ...newPost, likes_count: 0, comments_count: 0, is_liked: false }, ...posts]);
+            } else {
+                showToast("Post created successfully!");
+            }
+
             setPostContent("");
             setSelectedMedia(null);
             setMediaPreview(null);
@@ -288,7 +363,6 @@ export default function DedicatedFeedPage() {
             if (postError) throw postError;
 
             setPosts(posts.filter(p => p.id !== postId));
-            setOpenMenuId(null);
             showToast("Post deleted successfully!");
 
         } catch (error) {
@@ -301,7 +375,7 @@ export default function DedicatedFeedPage() {
         openReportModal({
             item_id: post.id,
             item_type: 'feed',
-            onSuccess: () => setOpenMenuId(null)
+            onSuccess: () => { }
         });
     };
 
@@ -535,16 +609,32 @@ export default function DedicatedFeedPage() {
         <div className="flex flex-col h-full bg-[#fcf6de] p-2 sm:p-8 pt-0 gap-4 max-w-[800px] mx-auto w-full min-h-screen overflow-x-hidden">
 
             {/* Header */}
-            <div className="flex items-center gap-4 mt-4 mb-4 sticky top-0 z-10 bg-[#fcf6de]/95 backdrop-blur py-4 border-b border-gray-100/50">
+            <div className="flex items-center gap-4 mt-4 mb-2 sticky top-[0px] md:top-[72px] z-20 bg-[#fcf6de]/95 backdrop-blur pt-4 pb-2">
                 <Link
                     href="/dashboard"
-                    className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm"
+                    className="hidden sm:flex w-10 h-10 bg-white border border-gray-200 rounded-full items-center justify-center hover:bg-gray-50 transition-colors shadow-sm"
                 >
                     <HugeiconsIcon icon={ArrowLeft01Icon} className="w-5 h-5 text-gray-700" />
                 </Link>
                 <h1 className="text-2xl sm:text-3xl font-black tracking-wide font-newyork text-gray-900 leading-none">
                     Campus Feed
                 </h1>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-gray-200 mb-4 sticky top-[68px] md:top-[140px] bg-[#fcf6de]/95 backdrop-blur z-20 pt-2">
+                {['all', 'trending'].map((tab) => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`flex-1 pb-3 text-center text-[15px] font-bold transition-all border-b-[3px] capitalize ${activeTab === tab
+                            ? 'border-[#ffc107] text-gray-900'
+                            : 'border-transparent text-gray-400 hover:text-gray-600'
+                            }`}
+                    >
+                        {tab === 'all' ? 'All Feeds' : 'Trending'}
+                    </button>
+                ))}
             </div>
 
             {/* Create Post Input Component */}
@@ -640,7 +730,9 @@ export default function DedicatedFeedPage() {
                             <HugeiconsIcon icon={Image01Icon} className="w-10 h-10 text-gray-400" />
                         </div>
                         <h3 className="text-2xl font-black font-newyork text-gray-900">The hive is quiet</h3>
-                        <p className="text-gray-500 font-bold mt-2">Start the conversion by posting what's happening!</p>
+                        <p className="text-gray-500 font-bold mt-2">
+                            {activeTab === 'all' ? "Start the conversion by posting what's happening!" : "No trending posts yet. Get posting!"}
+                        </p>
                     </div>
                 )}
 
@@ -656,7 +748,7 @@ export default function DedicatedFeedPage() {
 
                 {!hasMore && posts.length > 0 && (
                     <div className="text-center py-6 text-gray-400 font-medium text-sm">
-                        You've reached the end of the hive.
+                        {activeTab === 'all' ? "You've reached the end of the hive." : "That's all the top trending posts right now."}
                     </div>
                 )}
             </div>

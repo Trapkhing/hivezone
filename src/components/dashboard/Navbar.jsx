@@ -12,14 +12,13 @@ import { getDisplayName } from '@/utils/stringUtils';
 import NotificationDrawer from './NotificationDrawer';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
-    Mail01Icon,
     Search01Icon,
     Notification01Icon,
     Settings01Icon,
     ArrowDown01Icon,
     UserIcon,
     LogoutCircle02Icon,
-    Delete02Icon
+    BubbleChatIcon,
 } from "@hugeicons/core-free-icons";
 
 const Navbar = () => {
@@ -256,7 +255,7 @@ const Navbar = () => {
                 <div className="flex items-center gap-4">
                     {/* Message Icon */}
                     <Link href="/dashboard/chat" className="relative w-11 h-11 bg-white border border-gray-300 rounded-full flex items-center justify-center shadow-sm cursor-pointer hover:bg-gray-50 transition-colors">
-                        <HugeiconsIcon icon={Mail01Icon} className="w-6 h-6 outline-none text-gray-800" strokeWidth={1.5} />
+                        <HugeiconsIcon icon={BubbleChatIcon} className="w-6 h-6 outline-none text-gray-800" strokeWidth={1.5} />
                         {chatUnreadCount > 0 && (
                             <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-[#ff3b30] text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
                                 {chatUnreadCount > 99 ? '99+' : chatUnreadCount}

@@ -9,7 +9,8 @@ import {
     Delete02Icon,
     Alert01Icon,
     FavouriteIcon,
-    Comment01Icon
+    Comment01Icon,
+    Image01Icon,
 } from "@hugeicons/core-free-icons";
 import Avatar from "@/components/ui/Avatar";
 import AutoPauseVideo from "@/components/ui/AutoPauseVideo";
@@ -34,6 +35,9 @@ export default function FeedPostCard({
     const { showImage } = useUI();
     const menuRef = useRef(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    // Add state for tracking media loading
+    const [isMediaLoaded, setIsMediaLoaded] = useState(false);
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -140,19 +144,26 @@ export default function FeedPostCard({
                 )}
 
                 {post.media_url && (
-                    <div className="w-full rounded-xl overflow-hidden mt-3 cursor-pointer group/img bg-black shadow-sm border border-gray-100/50">
+                    <div className="relative w-full rounded-xl overflow-hidden mt-3 cursor-pointer group/img bg-gray-100 shadow-sm border border-gray-100/50 flex items-center justify-center min-h-[250px]">
+                        {!isMediaLoaded && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center animate-pulse bg-gray-100 z-10 w-full h-[250px] sm:h-[400px]">
+                                <HugeiconsIcon icon={Image01Icon} className="w-8 h-8 text-gray-300 mb-2" />
+                            </div>
+                        )}
                         {post.media_url.match(/\.(mp4|webm|ogg|mov)$/i) ? (
                             <AutoPauseVideo
                                 src={post.media_url}
-                                className="w-full max-h-[250px] sm:max-h-[600px] object-contain"
+                                className={`w-full max-h-[250px] sm:max-h-[600px] object-contain transition-opacity duration-500 flex-shrink-0 bg-black ${isMediaLoaded ? 'opacity-100 relative z-20' : 'opacity-0 absolute inset-0'}`}
                                 onClick={() => showImage(post.media_url)}
+                                onLoadedData={() => setIsMediaLoaded(true)}
                             />
                         ) : (
                             <img
                                 src={post.media_url}
                                 alt="Post media"
                                 onClick={() => showImage(post.media_url)}
-                                className="w-full max-h-[250px] sm:max-h-[600px] object-cover transition-transform duration-500 group-hover/img:scale-[1.02]"
+                                onLoad={() => setIsMediaLoaded(true)}
+                                className={`w-full max-h-[250px] sm:max-h-[600px] object-cover transition-all duration-500 group-hover/img:scale-[1.02] ${isMediaLoaded ? 'opacity-100 relative z-20 bg-black' : 'opacity-0 absolute inset-0'}`}
                             />
                         )}
                     </div>

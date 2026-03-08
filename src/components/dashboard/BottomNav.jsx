@@ -6,9 +6,9 @@ import { usePathname } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
     Home01Icon,
-    Briefcase02Icon, // Representing Campus Gigs/Search
+    Briefcase02Icon,
     Search01Icon,
-    Mail01Icon,
+    BubbleChatIcon,
 } from "@hugeicons/core-free-icons";
 import { useChatConfig } from "@/components/providers/ChatProvider";
 
@@ -38,7 +38,7 @@ const BottomNav = () => {
         {
             name: "Messages",
             href: "/dashboard/chat",
-            icon: Mail01Icon,
+            icon: BubbleChatIcon,
             isActive: pathname.startsWith("/dashboard/chat"),
             hasBadge: chatUnreadCount > 0,
             badgeCount: chatUnreadCount > 99 ? '99+' : chatUnreadCount

@@ -86,7 +86,7 @@ export default function AdminLayout({ children }) {
             <header className="flex items-center justify-between mb-8 shrink-0">
                 <div className="flex items-center gap-14">
                     {/* Logo */}
-                    <Link href="/" className="flex items-center">
+                    <Link href="/dashboard" className="flex items-center">
                         <Image src="/logo.svg" alt="HiveZone" width={140} height={40} className="h-9 w-auto" priority />
                     </Link>
 
