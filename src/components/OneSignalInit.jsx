@@ -17,7 +17,7 @@ export default function OneSignalInit() {
                             // Prompt the user to subscribe if they haven't already
                             await OneSignal.Slidedown.promptPush();
                         } catch (e) {
-                            console.error("OneSignal login error:", e);
+                            // Silence OneSignal login errors
                         }
                     });
                 }
@@ -32,11 +32,19 @@ export default function OneSignalInit() {
                 if (window.OneSignalDeferred) {
                     if (event === 'SIGNED_IN' && session?.user?.id) {
                         window.OneSignalDeferred.push(async function (OneSignal) {
-                            await OneSignal.login(session.user.id);
+                            try {
+                                await OneSignal.login(session.user.id);
+                            } catch (e) {
+                                // Silence
+                            }
                         });
                     } else if (event === 'SIGNED_OUT') {
                         window.OneSignalDeferred.push(async function (OneSignal) {
-                            await OneSignal.logout();
+                            try {
+                                await OneSignal.logout();
+                            } catch (e) {
+                                // Silence
+                            }
                         });
                     }
                 }

@@ -76,13 +76,18 @@ export default function RootLayout({ children }) {
           {`
             window.OneSignalDeferred = window.OneSignalDeferred || [];
             OneSignalDeferred.push(async function(OneSignal) {
-              await OneSignal.init({
-                appId: "b9314dfb-651e-4f29-b1e9-c1f6f2300b0e",
-                allowLocalhostAsSecureOrigin: true,
-                notifyButton: {
-                  enable: true,
-                },
-              });
+              try {
+                OneSignal.Debug.setLogLevel("none");
+                await OneSignal.init({
+                  appId: "b9314dfb-651e-4f29-b1e9-c1f6f2300b0e",
+                  allowLocalhostAsSecureOrigin: true,
+                  notifyButton: {
+                    enable: true,
+                  },
+                });
+              } catch (e) {
+                // Ignore OneSignal initialization errors (e.g., domain restriction on localhost)
+              }
             });
           `}
         </Script>
