@@ -41,6 +41,7 @@ const OnboardingPage = () => {
     const [displayDOB, setDisplayDOB] = useState("");
     const [studentId, setStudentId] = useState("");
     const [contact, setContact] = useState("");
+    const [displayName, setDisplayName] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -68,7 +69,7 @@ const OnboardingPage = () => {
         e.preventDefault();
         setError(null);
 
-        if (!institution || !programme || !gender || !yearOfStudy || !dateOfBirth || !studentId || !contact) {
+        if (!institution || !programme || !gender || !yearOfStudy || !dateOfBirth || !studentId || !contact || !displayName) {
             setError("Please fill in all the details.");
             return;
         }
@@ -93,6 +94,7 @@ const OnboardingPage = () => {
                 gender,
                 date_of_birth: dateOfBirth,
                 contact,
+                display_name: displayName,
                 is_onboarded: true
             })
             .eq('id', session.user.id);
@@ -153,6 +155,20 @@ const OnboardingPage = () => {
                             <span className="block sm:inline">{error}</span>
                         </div>
                     )}
+
+                    {/* Display Name */}
+                    <div>
+                        <label className="block text-sm font-semibold mb-2">Display Name</label>
+                        <input
+                            type="text"
+                            placeholder="John Doe"
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, handleSubmit)}
+                            className="w-full bg-transparent border border-zinc-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#ffc107] transition-colors"
+                        />
+                    </div>
+
                     {/* Name of Institution */}
                     <CustomDropdown
                         label="Name Of Institution"
