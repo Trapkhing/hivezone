@@ -78,6 +78,7 @@ export default function DedicatedFeedPage() {
                         *,
                         author:users!inner (
                             display_name,
+                            first_name,
                             username,
                             profile_picture,
                             is_verified,
@@ -287,6 +288,7 @@ export default function DedicatedFeedPage() {
                     *,
                     author:users!inner (
                         display_name,
+                        first_name,
                         username,
                         profile_picture,
                         is_verified,
@@ -470,6 +472,7 @@ export default function DedicatedFeedPage() {
                     *,
                     author:users (
                         display_name,
+                        first_name,
                         username,
                         profile_picture
                     )
@@ -506,6 +509,7 @@ export default function DedicatedFeedPage() {
                     *,
                     author:users (
                         display_name,
+                        first_name,
                         username,
                         profile_picture
                     )

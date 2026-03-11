@@ -32,7 +32,8 @@ export default function ReportsManagement() {
                 .select(`
                     *,
                     reporter:users!reporter_id (
-                        display_name
+                        display_name,
+                        first_name
                     )
                 `)
                 .order('created_at', { ascending: false });
@@ -196,7 +197,7 @@ export default function ReportsManagement() {
                                         </td>
                                         <td className="px-10 py-5">
                                             <div className="flex flex-col min-w-[120px]">
-                                                <span className="text-sm font-extrabold text-gray-900 truncate">{report.reporter?.display_name || 'Anonymous'}</span>
+                                                <span className="text-sm font-extrabold text-gray-900 truncate">{report.reporter?.display_name || report.reporter?.first_name}</span>
                                                 <span className="text-[10px] font-medium text-gray-400 mt-0.5">
                                                     {new Date(report.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                                 </span>

@@ -73,7 +73,7 @@ export default function FeedPostCard({
             >
                 <Avatar
                     src={post.author?.profile_picture}
-                    name={post.author?.display_name || "Author"}
+                    name={post.author?.display_name || post.author?.first_name}
                     className="w-full h-full rounded-full"
                 />
             </Link>
@@ -84,7 +84,7 @@ export default function FeedPostCard({
                 <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-x-2 gap-y-1 flex-wrap min-w-0">
                         <span className="font-bold text-gray-900 text-[16px]">
-                            {post.author?.display_name || 'Anonymous'}
+                            {post.author?.display_name || post.author?.first_name}
                         </span>
                         {post.author?.is_verified && (
                             <HugeiconsIcon icon={CheckmarkBadge01Icon} className="w-4 h-4 text-green-500 shrink-0" strokeWidth={2.5} />
