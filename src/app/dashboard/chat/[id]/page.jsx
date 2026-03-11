@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -15,7 +16,8 @@ import {
     Attachment01Icon,
     Image01Icon,
     Cancel01Icon,
-    Download01Icon
+    Download01Icon,
+    ArrowMoveUpLeftIcon,
 } from "@hugeicons/core-free-icons";
 import ChatSidebar from "@/components/dashboard/ChatSidebar";
 import { MessageSkeleton } from "@/components/ui/Skeleton";
@@ -65,9 +67,10 @@ export default function ChatWindowPage() {
     const { confirmAction, showToast, openReportModal, showImage } = useUI();
     const { setActiveConversation, refreshUnreadCount } = useChatConfig();
 
-    const [selectedAttachment, setSelectedAttachment] = useState(null);
-    const [attachmentPreview, setAttachmentPreview] = useState(null);
+    const [selectedAttachments, setSelectedAttachments] = useState([]);
+    const [attachmentPreviews, setAttachmentPreviews] = useState([]);
     const [isSending, setIsSending] = useState(false);
+    const [replyingTo, setReplyingTo] = useState(null);
 
     // Register this chat as the active conversation so the global provider
     // skips incrementing unread counts for messages arriving here
@@ -124,7 +127,14 @@ export default function ChatWindowPage() {
                 .order('created_at', { ascending: true });
 
             if (!msgError && !cancelled) {
-                setMessages(msgData || []);
+                const formattedMessages = (msgData || []).map(m => ({
+                    ...m,
+                    reply_to: msgData.find(parent => parent.id === m.reply_to_id) ? {
+                        sender: msgData.find(parent => parent.id === m.reply_to_id).sender_id === session.user.id ? 'You' : convData.participants.find(p => p.user.id !== session.user.id)?.user.display_name || 'Somebody',
+                        text: msgData.find(parent => parent.id === m.reply_to_id).content
+                    } : null
+                }));
+                setMessages(formattedMessages);
 
                 // Mark incoming messages as read
                 if (msgData?.length > 0) {
@@ -150,6 +160,20 @@ export default function ChatWindowPage() {
                         setMessages(prev => {
                             if (prev.find(m => m.id === payload.new.id)) return prev;
 
+                            // Helper to format the incoming message with reply data
+                            const formatMsg = (raw) => {
+                                const parent = prev.find(m => m.id === raw.reply_to_id);
+                                return {
+                                    ...raw,
+                                    reply_to: parent ? {
+                                        sender: parent.sender_id === session.user.id ? 'You' : convData.participants.find(p => p.user.id !== session.user.id)?.user.display_name || 'Somebody',
+                                        text: parent.content
+                                    } : null
+                                };
+                            };
+
+                            const formattedNew = formatMsg(payload.new);
+
                             const optimisticMatch = prev.find(m =>
                                 m.id.toString().startsWith('temp-') &&
                                 m.sender_id === payload.new.sender_id &&
@@ -157,10 +181,10 @@ export default function ChatWindowPage() {
                             );
 
                             if (optimisticMatch) {
-                                return prev.map(m => m.id === optimisticMatch.id ? payload.new : m);
+                                return prev.map(m => m.id === optimisticMatch.id ? formattedNew : m);
                             }
 
-                            return [...prev, payload.new];
+                            return [...prev, formattedNew];
                         });
 
                         // If the incoming message is not from us, mark it as read immediately
@@ -176,9 +200,15 @@ export default function ChatWindowPage() {
                     'postgres_changes',
                     { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${id}` },
                     (payload) => {
-                        setMessages(prev => prev.map(msg =>
-                            msg.id === payload.new.id ? payload.new : msg
-                        ));
+                        setMessages(prev => prev.map(msg => {
+                            if (msg.id !== payload.new.id) return msg;
+
+                            // Keep existing reply_to if it exists, as UPDATE payload won't have it
+                            return {
+                                ...payload.new,
+                                reply_to: msg.reply_to
+                            };
+                        }));
                     }
                 )
                 .subscribe((status) => {
@@ -227,22 +257,24 @@ export default function ChatWindowPage() {
     }, [router]);
 
     const handleAttachmentSelect = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const fileSizeMB = file.size / (1024 * 1024);
-            if (fileSizeMB > 15) {
-                showToast("File size must be less than 15MB.", "error");
-                e.target.value = "";
-                return;
+        const files = Array.from(e.target.files);
+        if (files.length > 0) {
+            const validFiles = files.filter(file => (file.size / (1024 * 1024)) <= 15);
+            if (validFiles.length !== files.length) {
+                showToast("Some files are larger than 15MB and were excluded.", "error");
             }
-            setSelectedAttachment(file);
-            setAttachmentPreview(URL.createObjectURL(file));
+            if (validFiles.length > 0) {
+                setSelectedAttachments(prev => [...prev, ...validFiles]);
+                setAttachmentPreviews(prev => [...prev, ...validFiles.map(f => URL.createObjectURL(f))]);
+            }
         }
+        // clear input so same files can be selected again if needed
+        e.target.value = "";
     };
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
-        if ((!newMessage.trim() && !selectedAttachment) || !currentUser) return;
+        if ((!newMessage.trim() && selectedAttachments.length === 0) || !currentUser) return;
 
         setIsSending(true);
 
@@ -255,43 +287,58 @@ export default function ChatWindowPage() {
             conversation_id: id,
             sender_id: currentUser.id,
             content: content || "",
-            attachment_url: attachmentPreview || null,
+            attachment_url: attachmentPreviews.length > 0 ? attachmentPreviews.join(',') : null,
             created_at: new Date().toISOString(),
-            is_read: false
+            is_read: false,
+            reply_to_id: replyingTo?.id,
+            reply_to: replyingTo ? {
+                sender: replyingTo.sender_id === currentUser.id ? 'You' : conversation.otherUser.display_name,
+                text: replyingTo.content
+            } : null
         };
 
         setMessages(prev => [...prev, optimisticMsg]);
 
-        const msgAttachmentFile = selectedAttachment;
+        const msgAttachmentFiles = [...selectedAttachments];
+        const replyToId = replyingTo?.id;
 
         setNewMessage("");
-        setSelectedAttachment(null);
-        setAttachmentPreview(null);
+        setReplyingTo(null);
+        setSelectedAttachments([]);
+        setAttachmentPreviews([]);
 
-        let url = null;
+        let urls = [];
 
-        if (msgAttachmentFile) {
-            const fileExt = msgAttachmentFile.name.split('.').pop();
-            const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
-            const filePath = `chat-attachments/${fileName}`;
+        if (msgAttachmentFiles.length > 0) {
+            const uploadPromises = msgAttachmentFiles.map(async (file, index) => {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${currentUser.id}-${Date.now()}-${index}.${fileExt}`;
+                const filePath = `chat-attachments/${fileName}`;
 
-            const { error: uploadError } = await supabase.storage
-                .from('chat-attachments')
-                .upload(filePath, msgAttachmentFile);
+                const { error: uploadError } = await supabase.storage
+                    .from('chat-attachments')
+                    .upload(filePath, file);
 
-            if (uploadError) {
-                showToast("Failed to upload attachment", "error");
+                if (uploadError) throw uploadError;
+
+                const { data: urlData } = supabase.storage
+                    .from('chat-attachments')
+                    .getPublicUrl(filePath);
+
+                return urlData.publicUrl;
+            });
+
+            try {
+                urls = await Promise.all(uploadPromises);
+            } catch (error) {
+                showToast("Failed to upload one or more attachments", "error");
                 setMessages(prev => prev.filter(m => m.id !== tempId));
                 setIsSending(false);
                 return;
             }
-
-            const { data: urlData } = supabase.storage
-                .from('chat-attachments')
-                .getPublicUrl(filePath);
-
-            url = urlData.publicUrl;
         }
+
+        const url = urls.length > 0 ? urls.join(',') : null;
 
         const { error } = await supabase
             .from('messages')
@@ -299,7 +346,8 @@ export default function ChatWindowPage() {
                 conversation_id: id,
                 sender_id: currentUser.id,
                 content: content || "",
-                attachment_url: url
+                attachment_url: url,
+                reply_to_id: replyToId
             });
 
         setIsSending(false);
@@ -494,122 +542,238 @@ export default function ChatWindowPage() {
                             </div>
                         )}
 
-                        {messages.map((msg, idx) => {
-                            const isMe = msg.sender_id === currentUser?.id;
-                            const isTemp = msg.id.toString().startsWith('temp-');
+                        {messages.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full text-center opacity-30 mt-10">
+                                <HugeiconsIcon icon={InformationCircleIcon} className="w-12 h-12 mb-2" />
+                                <p className="font-bold">No messages yet. Start the conversation!</p>
+                            </div>
+                        ) : (
+                            (() => {
+                                const grouped = messages.reduce((acc, msg) => {
+                                    const dateStr = new Date(msg.created_at || new Date()).toDateString();
+                                    if (!acc[dateStr]) acc[dateStr] = [];
+                                    acc[dateStr].push(msg);
+                                    return acc;
+                                }, {});
 
-                            // Check if message is less than 30 mins old
-                            const msgAgeMs = new Date() - new Date(msg.created_at);
-                            const canDelete = isMe && !isTemp && (msgAgeMs < 30 * 60 * 1000);
+                                return Object.entries(grouped).map(([dateStr, dayMessages]) => {
+                                    const date = new Date(dateStr);
+                                    const today = new Date();
+                                    const yesterday = new Date();
+                                    yesterday.setDate(today.getDate() - 1);
 
-                            return (
-                                <div
-                                    key={msg.id || idx}
-                                    className={`flex group ${isMe ? 'justify-end' : 'justify-start'}`}
-                                >
-                                    <div className="flex items-center gap-2 max-w-[85%] sm:max-w-[70%]">
+                                    let dateLabel = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-                                        {canDelete && (
-                                            <button
-                                                onClick={() => handleDeleteMessage(msg.id)}
-                                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-100 md:opacity-0 group-hover:opacity-100 shrink-0"
-                                                title="Delete message"
-                                            >
-                                                <HugeiconsIcon icon={Delete01Icon} size={16} />
-                                            </button>
-                                        )}
+                                    const isSameDay = (d1, d2) =>
+                                        d1.getFullYear() === d2.getFullYear() &&
+                                        d1.getMonth() === d2.getMonth() &&
+                                        d1.getDate() === d2.getDate();
 
-                                        <div className={`px-5 py-3 rounded-[1.5rem] shadow-sm text-sm font-medium overflow-hidden flex flex-col gap-2 ${isMe
-                                            ? 'bg-[#ffc107] text-black rounded-tr-none'
-                                            : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
-                                            }`}>
-                                            {/* Render Attachment if exists */}
-                                            {msg.attachment_url && (
-                                                <div className="max-w-[250px] md:max-w-sm overflow-hidden rounded-xl">
-                                                    {msg.attachment_url.match(/\.(jpeg|jpg|gif|png)$/i) || msg.attachment_url.startsWith('blob:') ? (
-                                                        <img
-                                                            src={msg.attachment_url}
-                                                            alt="Attachment"
-                                                            className="w-full h-auto object-cover cursor-pointer hover:opacity-95 transition-opacity"
-                                                            onClick={() => showImage(msg.attachment_url, "Attachment")}
-                                                        />
-                                                    ) : (
-                                                        <div
-                                                            onClick={() => downloadFile(msg.attachment_url, `attachment-${msg.id}`)}
-                                                            className={`flex items-center justify-between gap-3 p-3 rounded-xl border cursor-pointer hover:opacity-90 transition-opacity ${isMe ? 'bg-black/5 border-black/10 text-black' : 'bg-gray-50 border-gray-100 text-gray-800'}`}
-                                                        >
-                                                            <div className="flex items-center gap-3 overflow-hidden">
-                                                                <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${isMe ? 'bg-white/40' : 'bg-white shadow-sm'}`}>
-                                                                    <HugeiconsIcon icon={Attachment01Icon} className="w-5 h-5 opacity-70" />
-                                                                </div>
-                                                                <div className="flex flex-col overflow-hidden">
-                                                                    <span className="text-sm font-bold truncate max-w-[150px]">
-                                                                        {(() => {
-                                                                            try {
-                                                                                const urlObj = new URL(msg.attachment_url);
-                                                                                const pathParts = urlObj.pathname.split('/');
-                                                                                const lastPart = pathParts[pathParts.length - 1];
-                                                                                // Remove the timestamp/user id prefix if it exists to just show the real name
-                                                                                const cleanName = decodeURIComponent(lastPart).replace(/^[^-]+-\d+\./, '');
-                                                                                return cleanName || 'Document';
-                                                                            } catch (e) {
-                                                                                return 'Document';
-                                                                            }
-                                                                        })()}
-                                                                    </span>
-                                                                    <span className="text-[10px] opacity-60 uppercase">{msg.attachment_url.split('.').pop() || 'FILE'}</span>
-                                                                </div>
-                                                            </div>
-                                                            <div className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center border ${isMe ? 'border-black/10 text-black' : 'border-gray-200 text-gray-500'}`}>
-                                                                <HugeiconsIcon icon={Download01Icon} className="w-4 h-4" />
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
+                                    if (isSameDay(date, today)) dateLabel = "Today";
+                                    else if (isSameDay(date, yesterday)) dateLabel = "Yesterday";
 
-                                            {msg.content && (
-                                                <p className="whitespace-pre-wrap">{msg.content}</p>
-                                            )}
-                                            <div className={`text-[10px] mt-1 opacity-50 flex items-center justify-end ${isMe ? 'text-black' : 'text-gray-500'}`}>
-                                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                {isMe && (
-                                                    <HugeiconsIcon
-                                                        icon={msg.is_read ? TickDouble02Icon : Tick02Icon}
-                                                        size={12}
-                                                        className={`ml-1 ${msg.is_read ? 'text-blue-600' : 'text-gray-600'}`}
-                                                    />
-                                                )}
+                                    return (
+                                        <div key={dateStr} className="w-full flex flex-col gap-4">
+                                            <div className="sticky top-0 z-20 flex justify-center py-4 pointer-events-none">
+                                                <span className="bg-white/95 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-gray-500 uppercase tracking-widest shadow-md border border-gray-100 pointer-events-auto">
+                                                    {dateLabel}
+                                                </span>
                                             </div>
-                                        </div>
+                                            {dayMessages.map((msg, idx) => {
+                                                const isMe = msg.sender_id === currentUser?.id;
+                                                const isTemp = msg.id.toString().startsWith('temp-');
 
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                                // Check if message is less than 30 mins old
+                                                const msgAgeMs = new Date() - new Date(msg.created_at);
+                                                const canDelete = isMe && !isTemp && (msgAgeMs < 30 * 60 * 1000);
+
+                                                return (
+                                                    <div
+                                                        key={msg.id || idx}
+                                                        className={`flex group ${isMe ? 'justify-end' : 'justify-start'}`}
+                                                    >
+                                                        <div className="flex items-center gap-2 max-w-[85%] sm:max-w-[70%]">
+                                                            {canDelete && (
+                                                                <button
+                                                                    onClick={() => handleDeleteMessage(msg.id)}
+                                                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-100 md:opacity-0 group-hover:opacity-100 shrink-0"
+                                                                    title="Delete message"
+                                                                >
+                                                                    <HugeiconsIcon icon={Delete01Icon} size={16} />
+                                                                </button>
+                                                            )}
+
+                                                            <motion.div
+                                                                drag="x"
+                                                                dragConstraints={{ left: 0, right: 80 }}
+                                                                dragElastic={0.2}
+                                                                dragSnapToOrigin={true}
+                                                                onDragEnd={(e, info) => {
+                                                                    if (info.offset.x > 50) {
+                                                                        setReplyingTo(msg);
+                                                                    }
+                                                                }}
+                                                                className={`px-5 py-3 rounded-[1.5rem] shadow-sm text-sm font-medium overflow-hidden flex flex-col gap-2 relative group/msg cursor-grab active:cursor-grabbing ${isMe
+                                                                    ? 'bg-[#ffc107] text-black rounded-tr-none'
+                                                                    : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
+                                                                    }`}
+                                                                whileTap={{ scale: 0.98 }}
+                                                            >
+                                                                {/* Swipe Indicator */}
+                                                                <div className="absolute inset-y-0 -left-10 flex items-center justify-center opacity-0 group-active/msg:opacity-100 transition-opacity">
+                                                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shadow-sm">
+                                                                        <HugeiconsIcon icon={ArrowMoveUpLeftIcon} className="w-4 h-4 text-gray-400" />
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Render Quoted Message */}
+                                                                {msg.reply_to && (
+                                                                    <div className={`mb-1 p-2 rounded-lg border-l-4 text-[12px] bg-black/5 border-black/20 text-gray-600 line-clamp-2`}>
+                                                                        <span className="font-black text-[10px] block uppercase tracking-wider mb-0.5">
+                                                                            {msg.reply_to.sender}
+                                                                        </span>
+                                                                        {msg.reply_to.text}
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Render Attachment if exists */}
+                                                                {msg.attachment_url && (() => {
+                                                                    const urls = msg.attachment_url.split(',');
+                                                                    const images = urls.filter(url => url.match(/\\.(jpeg|jpg|gif|png|webp)(\\?.*)?$/i) || url.startsWith('blob:') || url.match(/\\.(jpeg|jpg|gif|png|webp)$/i));
+                                                                    const docs = urls.filter(url => !(url.match(/\\.(jpeg|jpg|gif|png|webp)(\\?.*)?$/i) || url.startsWith('blob:') || url.match(/\\.(jpeg|jpg|gif|png|webp)$/i)));
+                                                                    return (
+                                                                        <div className="max-w-[280px] md:max-w-sm rounded-xl flex flex-col gap-1">
+                                                                            {images.length > 0 && (
+                                                                                <div className={`grid gap-1 ${images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} rounded-xl overflow-hidden`}>
+                                                                                    {images.map((url, i) => (
+                                                                                        <div key={i} className={`overflow-hidden ${images.length === 3 && i === 0 ? 'col-span-2 aspect-[2/1]' : images.length === 1 ? 'aspect-auto' : 'aspect-square'}`}>
+                                                                                            <img
+                                                                                                src={url}
+                                                                                                alt="Attachment"
+                                                                                                className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                                                                                                onClick={() => showImage(url, "Attachment")}
+                                                                                            />
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                            {docs.length > 0 && docs.map((url, i) => (
+                                                                                <div
+                                                                                    key={i}
+                                                                                    onClick={() => downloadFile(url, `attachment-${msg.id}-${i}`)}
+                                                                                    className={`flex items-center justify-between gap-3 p-3 rounded-xl border cursor-pointer hover:opacity-90 transition-opacity mt-1 ${isMe ? 'bg-black/5 border-black/10 text-black' : 'bg-gray-50 border-gray-100 text-gray-800'}`}
+                                                                                >
+                                                                                    <div className="flex items-center gap-3 overflow-hidden">
+                                                                                        <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${isMe ? 'bg-white/40' : 'bg-white shadow-sm'}`}>
+                                                                                            <HugeiconsIcon icon={Attachment01Icon} className="w-5 h-5 opacity-70" />
+                                                                                        </div>
+                                                                                        <div className="flex flex-col overflow-hidden">
+                                                                                            <span className="text-sm font-bold truncate max-w-[150px]">
+                                                                                                {(() => {
+                                                                                                    try {
+                                                                                                        const urlObj = new URL(url);
+                                                                                                        const pathParts = urlObj.pathname.split('/');
+                                                                                                        const lastPart = pathParts[pathParts.length - 1];
+                                                                                                        const cleanName = decodeURIComponent(lastPart).replace(/^[^-]+-\\d+\\./, '');
+                                                                                                        return cleanName || 'Document';
+                                                                                                    } catch (e) {
+                                                                                                        return 'Document';
+                                                                                                    }
+                                                                                                })()}
+                                                                                            </span>
+                                                                                            <span className="text-[10px] opacity-60 uppercase">{url.split('.').pop()?.split('?')[0] || 'FILE'}</span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center border ${isMe ? 'border-black/10 text-black' : 'border-gray-200 text-gray-500'}`}>
+                                                                                        <HugeiconsIcon icon={Download01Icon} className="w-4 h-4" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    );
+                                                                })()}
+
+                                                                {msg.content && (
+                                                                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                                                                )}
+                                                                <div className={`text-[10px] mt-1 opacity-50 flex items-center justify-end ${isMe ? 'text-black' : 'text-gray-500'}`}>
+                                                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                    {isMe && (
+                                                                        <HugeiconsIcon
+                                                                            icon={msg.is_read ? TickDouble02Icon : Tick02Icon}
+                                                                            size={12}
+                                                                            className={`ml-1 ${msg.is_read ? 'text-blue-600' : 'text-gray-600'}`}
+                                                                        />
+                                                                    )}
+                                                                </div>
+                                                            </motion.div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                });
+                            })()
+                        )}
                     </div>
 
                     {/* Input Area */}
                     <div className="fixed md:relative bottom-[64px] md:bottom-auto left-0 right-0 md:left-auto md:right-auto p-4 md:p-6 md:pt-0 shrink-0 bg-white/90 md:bg-transparent backdrop-blur-sm md:backdrop-blur-none border-t border-gray-100 md:border-none z-10">
+                        {/* Reply Preview */}
+                        <AnimatePresence>
+                            {replyingTo && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 10 }}
+                                    className="mb-3 flex gap-3"
+                                >
+                                    <div className="flex-1 bg-gray-50 p-3 rounded-2xl border-l-4 border-[#ffc107] text-sm relative">
+                                        <span className="font-black text-[11px] block text-[#ffc107] uppercase tracking-widest mb-1">
+                                            Replying to {replyingTo.sender_id === currentUser?.id ? 'You' : conversation?.otherUser.computedName}
+                                        </span>
+                                        <p className="text-gray-500 line-clamp-1">{replyingTo.content}</p>
+                                        <button
+                                            onClick={() => setReplyingTo(null)}
+                                            className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center hover:bg-gray-200 text-gray-400"
+                                        >
+                                            <HugeiconsIcon icon={Cancel01Icon} className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
                         {/* Attachment Preview Container */}
-                        {attachmentPreview && (
-                            <div className="mb-3 px-2 flex">
-                                <div className="relative inline-block border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm p-1 pr-8">
-                                    {selectedAttachment?.type.startsWith('image/') ? (
-                                        <img src={attachmentPreview} alt="Preview" className="h-20 w-auto rounded-lg object-cover" />
-                                    ) : (
-                                        <div className="flex items-center gap-3 px-3 py-2">
-                                            <HugeiconsIcon icon={Attachment01Icon} className="w-5 h-5 text-gray-500" />
-                                            <span className="text-sm font-medium text-gray-700 max-w-[150px] truncate">{selectedAttachment?.name}</span>
-                                        </div>
-                                    )}
-                                    <button
-                                        onClick={() => { setSelectedAttachment(null); setAttachmentPreview(null); }}
-                                        className="absolute top-1 right-1 w-6 h-6 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full flex items-center justify-center transition-colors"
-                                    >
-                                        <HugeiconsIcon icon={Cancel01Icon} className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
+                        {attachmentPreviews && attachmentPreviews.length > 0 && (
+                            <div className="mb-3 px-2 flex flex-wrap gap-2">
+                                {attachmentPreviews.map((preview, idx) => (
+                                    <div key={idx} className="relative inline-block border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm p-1 pr-8">
+                                        {selectedAttachments[idx]?.type.startsWith('image/') ? (
+                                            <img src={preview} alt="Preview" className="h-16 w-auto rounded-lg object-cover" />
+                                        ) : (
+                                            <div className="flex items-center gap-3 px-3 py-2">
+                                                <HugeiconsIcon icon={Attachment01Icon} className="w-5 h-5 text-gray-500" />
+                                                <span className="text-sm font-medium text-gray-700 max-w-[150px] truncate">{selectedAttachments[idx]?.name}</span>
+                                            </div>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const newFiles = [...selectedAttachments];
+                                                newFiles.splice(idx, 1);
+                                                setSelectedAttachments(newFiles);
+                                                const newPreviews = [...attachmentPreviews];
+                                                newPreviews.splice(idx, 1);
+                                                setAttachmentPreviews(newPreviews);
+                                            }}
+                                            className="absolute top-1 right-1 w-6 h-6 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full flex items-center justify-center transition-colors"
+                                        >
+                                            <HugeiconsIcon icon={Cancel01Icon} className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
                         )}
                         <form
@@ -633,6 +797,7 @@ export default function ChatWindowPage() {
                             <div className="flex items-center gap-1 pb-1">
                                 <input
                                     type="file"
+                                    multiple
                                     ref={fileInputRef}
                                     onChange={handleAttachmentSelect}
                                     className="hidden"
@@ -660,7 +825,7 @@ export default function ChatWindowPage() {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={isSending || (!newMessage.trim() && !selectedAttachment)}
+                                    disabled={isSending || (!newMessage.trim() && selectedAttachments.length === 0)}
                                     className="size-11 bg-black text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none shrink-0"
                                 >
                                     <HugeiconsIcon icon={SentIcon} size={20} />
