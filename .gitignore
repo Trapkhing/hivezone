@@ -41,3 +41,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# capacitor
+/android
+/ios
+/www
+build_output.txt
+build_log.txt

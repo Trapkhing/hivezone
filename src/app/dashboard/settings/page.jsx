@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useUI } from "@/components/ui/UIProvider";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertIcon, ArrowLeft01Icon, Camera01Icon } from "@hugeicons/core-free-icons";
+import { AlertIcon, ArrowLeft01Icon, Camera01Icon, Download01Icon } from "@hugeicons/core-free-icons";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import { useRef } from "react";
 
@@ -13,6 +13,7 @@ import { useRef } from "react";
 const menuItems = [
     { id: "profile", label: "Edit Profile" },
     { id: "password", label: "Change Password" },
+    { id: "download", label: "Get the App", href: "/download" },
     { id: "delete", label: "Delete Account", isDestructive: true }
 ];
 
@@ -227,13 +228,19 @@ export default function SettingsPage() {
                     {menuItems.map((item, index) => (
                         <button
                             key={item.id}
-                            onClick={() => setActiveTab(item.id)}
-                            className={`w-full text-left px-6 py-4 font-bold text-sm transition-colors border-b border-gray-100 last:border-0
+                            onClick={() => item.href ? router.push(item.href) : setActiveTab(item.id)}
+                            className={`w-full text-left px-6 py-4 font-bold text-sm transition-colors border-b border-gray-100 last:border-0 flex items-center justify-between
                                 ${activeTab === item.id ? "bg-gray-50 text-black" : "bg-white text-gray-600 hover:bg-gray-50 hover:text-black"}
                                 ${item.isDestructive ? "text-red-500 hover:text-red-600 hover:bg-red-50" : ""}
                             `}
                         >
-                            {item.label}
+                            <span>{item.label}</span>
+                            {item.id === "download" && (
+                                <HugeiconsIcon 
+                                    icon={Download01Icon} 
+                                    className="w-5 h-5 text-[#ffc107]" 
+                                />
+                            )}
                         </button>
                     ))}
                 </div>

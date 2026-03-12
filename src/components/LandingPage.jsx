@@ -3,6 +3,7 @@
 import GetStarted from './GetStarted';
 import SectionSeparator from './SectionSeparator';
 import Features from './Features';
+import DownloadBanner from './DownloadBanner';
 
 const LandingPage = () => {
     return (
@@ -19,6 +20,8 @@ const LandingPage = () => {
 
             <SectionSeparator />
             <Features />
+            <SectionSeparator />
+            <DownloadBanner />
             <SectionSeparator />
             <GetStarted />
         </main>
