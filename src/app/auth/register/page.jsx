@@ -52,10 +52,21 @@ const RegisterPage = () => {
             return;
         }
 
+        // Name validation: Letters and spaces only, 2-50 characters
+        const nameRegex = /^[a-zA-Z\s]{2,50}$/;
+        if (!nameRegex.test(cleanFirstName)) {
+            setError("First name can only contain letters and spaces, and must be 2-50 characters long. No special characters or emojis allowed.");
+            return;
+        }
+        if (!nameRegex.test(cleanLastName)) {
+            setError("Last name can only contain letters and spaces, and must be 2-50 characters long. No special characters or emojis allowed.");
+            return;
+        }
+
         // Username validation: 3-20 characters, alphanumeric and underscores only
         const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
         if (!usernameRegex.test(cleanUsername)) {
-            setError("Username must be 3-20 characters long and can only contain letters, numbers, and underscores.");
+            setError("Username must be 3-20 characters long and can only contain letters, numbers, and underscores. No special characters or emojis allowed.");
             return;
         }
 
@@ -196,6 +207,16 @@ const RegisterPage = () => {
                             <span className="block sm:inline">{error}</span>
                         </div>
                     )}
+
+                    {/* Student Verification Disclaimer */}
+                    <div className="flex items-start gap-3 bg-amber-100/50 border border-[#ffc107]/30 rounded-2xl p-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-[#ffc107] shrink-0 mt-0.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                        </svg>
+                        <p className="text-[12px] text-zinc-700 font-medium leading-snug">
+                            Please use your <span className="font-bold text-black">real name</span> and campus information. This helps us verify you as a student and maintain a trusted community.
+                        </p>
+                    </div>
 
                     {/* First Name & Last Name */}
                     <div className="grid grid-cols-2 gap-4">
