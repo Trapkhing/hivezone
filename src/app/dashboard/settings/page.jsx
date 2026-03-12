@@ -84,22 +84,31 @@ export default function SettingsPage() {
         setUploading(true);
         try {
             const fileExt = file.name.split('.').pop();
-            const fileName = `${userId}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-            const filePath = `${fileName}`;
+            const fileName = `avatars/${userId}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-            // Upload to 'avatars' bucket
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(filePath, file, { upsert: true });
+            // 1. Get presigned URL from our API
+            const response = await fetch("/api/upload", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    fileName: fileName,
+                    fileType: file.type,
+                }),
+            });
 
-            if (uploadError) throw uploadError;
+            if (!response.ok) throw new Error("Failed to get upload URL");
+            const { uploadUrl, publicUrl } = await response.json();
 
-            // Get public URL
-            const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(filePath);
+            // 2. Upload directly to Cloudflare R2
+            const uploadResponse = await fetch(uploadUrl, {
+                method: "PUT",
+                headers: { "Content-Type": file.type },
+                body: file,
+            });
 
-            // Update user profile in DB
+            if (!uploadResponse.ok) throw new Error("Failed to upload");
+
+            // 3. Update user profile in Supabase DB with the R2 public URL
             const { error: updateError } = await supabase
                 .from('users')
                 .update({ profile_picture: publicUrl })
@@ -111,7 +120,7 @@ export default function SettingsPage() {
             showToast("Profile picture updated!");
         } catch (error) {
             console.error("Error uploading image:", error);
-            showToast("Failed to upload image. Make sure 'avatars' bucket exists.", "error");
+            showToast("Failed to upload image.", "error");
         } finally {
             setUploading(false);
         }
@@ -135,7 +144,7 @@ export default function SettingsPage() {
             showToast("Profile updated successfully!");
         } else {
             console.error("Error updating profile:", error);
-            showToast("Failed to update profile.", "error");
+            showToast("Failed to update profile", "error");
         }
     };
 

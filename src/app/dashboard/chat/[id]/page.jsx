@@ -312,25 +312,37 @@ export default function ChatWindowPage() {
         if (msgAttachmentFiles.length > 0) {
             const uploadPromises = msgAttachmentFiles.map(async (file, index) => {
                 const fileExt = file.name.split('.').pop();
-                const fileName = `${currentUser.id}-${Date.now()}-${index}.${fileExt}`;
-                const filePath = `chat-attachments/${fileName}`;
+                const fileName = `chat-attachments/${currentUser.id}-${Date.now()}-${index}.${fileExt}`;
 
-                const { error: uploadError } = await supabase.storage
-                    .from('chat-attachments')
-                    .upload(filePath, file);
+                // 1. Get presigned URL from our API
+                const response = await fetch("/api/upload", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        fileName: fileName,
+                        fileType: file.type,
+                    }),
+                });
 
-                if (uploadError) throw uploadError;
+                if (!response.ok) throw new Error("Failed to get upload URL");
+                const { uploadUrl, publicUrl: r2PublicUrl } = await response.json();
 
-                const { data: urlData } = supabase.storage
-                    .from('chat-attachments')
-                    .getPublicUrl(filePath);
+                // 2. Upload directly to Cloudflare R2
+                const uploadResponse = await fetch(uploadUrl, {
+                    method: "PUT",
+                    headers: { "Content-Type": file.type },
+                    body: file,
+                });
 
-                return urlData.publicUrl;
+                if (!uploadResponse.ok) throw new Error("Failed to upload");
+
+                return r2PublicUrl;
             });
 
             try {
                 urls = await Promise.all(uploadPromises);
             } catch (error) {
+                console.error("Error uploading attachments:", error);
                 showToast("Failed to upload one or more attachments", "error");
                 setMessages(prev => prev.filter(m => m.id !== tempId));
                 setIsSending(false);

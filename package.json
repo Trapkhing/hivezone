@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1007.0",
+    "@aws-sdk/s3-request-presigner": "^3.1007.0",
     "@hugeicons/core-free-icons": "^3.3.0",
     "@hugeicons/react": "^1.1.5",
     "@supabase/ssr": "^0.8.0",

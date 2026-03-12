@@ -73,20 +73,31 @@ export default function PostGigPage() {
             let imageUrl = null;
             if (selectedImage) {
                 const fileExt = selectedImage.name.split('.').pop();
-                const fileName = `${Math.random()}.${fileExt}`;
-                const filePath = `gig-images/${fileName}`;
+                const fileName = `gig-images/${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
 
-                const { error: uploadError } = await supabase.storage
-                    .from('gigs')
-                    .upload(filePath, selectedImage);
+                // 1. Get presigned URL from our API
+                const response = await fetch("/api/upload", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        fileName: fileName,
+                        fileType: selectedImage.type,
+                    }),
+                });
 
-                if (uploadError) throw uploadError;
+                if (!response.ok) throw new Error("Failed to get upload URL");
+                const { uploadUrl, publicUrl: r2PublicUrl } = await response.json();
 
-                const { data: { publicUrl } } = supabase.storage
-                    .from('gigs')
-                    .getPublicUrl(filePath);
+                // 2. Upload directly to Cloudflare R2
+                const uploadResponse = await fetch(uploadUrl, {
+                    method: "PUT",
+                    headers: { "Content-Type": selectedImage.type },
+                    body: selectedImage,
+                });
 
-                imageUrl = publicUrl;
+                if (!uploadResponse.ok) throw new Error("Failed to upload");
+
+                imageUrl = r2PublicUrl;
             }
 
             const gigData = {

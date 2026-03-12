@@ -93,20 +93,35 @@ export default function EditCirclePage({ params }) {
 
         // Handle File Upload
         if (selectedAvatarFile) {
-            const fileExt = selectedAvatarFile.name.split('.').pop();
-            const fileName = `${Math.random().toString(36).substring(2, 9)}-${Date.now()}.${fileExt}`;
-            const filePath = `avatars/${fileName}`;
+            try {
+                const fileExt = selectedAvatarFile.name.split('.').pop();
+                const fileName = `study-circle-avatars/${Math.random().toString(36).substring(2, 9)}-${Date.now()}.${fileExt}`;
 
-            const { error: uploadError } = await supabase.storage
-                .from('study-circles')
-                .upload(filePath, selectedAvatarFile);
+                // 1. Get presigned URL from our API
+                const response = await fetch("/api/upload", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        fileName: fileName,
+                        fileType: selectedAvatarFile.type,
+                    }),
+                });
 
-            if (!uploadError) {
-                const { data: { publicUrl } } = supabase.storage
-                    .from('study-circles')
-                    .getPublicUrl(filePath);
-                updatedAvatarUrl = publicUrl;
-            } else {
+                if (!response.ok) throw new Error("Failed to get upload URL");
+                const { uploadUrl, publicUrl: r2PublicUrl } = await response.json();
+
+                // 2. Upload directly to Cloudflare R2
+                const uploadResponse = await fetch(uploadUrl, {
+                    method: "PUT",
+                    headers: { "Content-Type": selectedAvatarFile.type },
+                    body: selectedAvatarFile,
+                });
+
+                if (!uploadResponse.ok) throw new Error("Failed to upload");
+
+                updatedAvatarUrl = r2PublicUrl;
+            } catch (error) {
+                console.error("Circle avatar upload error:", error);
                 showToast("Image upload failed. Other changes will be saved.", "error");
             }
         }

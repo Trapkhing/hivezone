@@ -116,23 +116,34 @@ const CampusFeeds = () => {
 
             let url = null;
 
-            // Upload image if selected
+            // Upload media if selected
             if (selectedMedia) {
                 const fileExt = selectedMedia.name.split('.').pop();
-                const fileName = `${session.user.id}-${Math.random()}.${fileExt}`;
-                const filePath = `post-media/${fileName}`;
+                const fileName = `post-media/${session.user.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-                const { error: uploadError } = await supabase.storage
-                    .from('feeds')
-                    .upload(filePath, selectedMedia);
+                // 1. Get presigned URL from our API
+                const response = await fetch("/api/upload", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        fileName: fileName,
+                        fileType: selectedMedia.type,
+                    }),
+                });
 
-                if (uploadError) throw uploadError;
+                if (!response.ok) throw new Error("Failed to get upload URL");
+                const { uploadUrl, publicUrl: r2PublicUrl } = await response.json();
 
-                const { data: urlData } = supabase.storage
-                    .from('feeds')
-                    .getPublicUrl(filePath);
+                // 2. Upload directly to Cloudflare R2
+                const uploadResponse = await fetch(uploadUrl, {
+                    method: "PUT",
+                    headers: { "Content-Type": selectedMedia.type },
+                    body: selectedMedia,
+                });
 
-                url = urlData.publicUrl;
+                if (!uploadResponse.ok) throw new Error("Failed to upload");
+
+                url = r2PublicUrl;
             }
 
             // Create post in DB
