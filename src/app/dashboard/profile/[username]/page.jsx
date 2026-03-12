@@ -437,15 +437,15 @@ export default function PublicProfilePage() {
                                 </span>
 
                                 <div className="flex flex-col text-[13px] text-gray-600 font-medium mt-3 gap-0.5">
-                                    <span>{profile?.institution || "Institution not provided"}</span>
-                                    <span>{profile?.programme || "Programme not provided"}</span>
+                                    <span>{profile?.institution || ""}</span>
+                                    <span>{profile?.programme || ""}</span>
                                     {profile?.year_of_study && (
                                         <span>{profile.year_of_study}</span>
                                     )}
                                 </div>
 
                                 <p className="text-[13px] text-gray-600 font-medium mt-4 leading-relaxed pr-8">
-                                    {profile?.bio || "This user hasn't written a bio yet."}
+                                    {profile?.bio || ""}
                                 </p>
                             </div>
 
