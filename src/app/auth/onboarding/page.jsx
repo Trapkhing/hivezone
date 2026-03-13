@@ -96,26 +96,42 @@ const OnboardingForm = () => {
             return;
         }
 
-        const { error: updateError } = await supabase
-            .from('users')
-            .update({
-                institution,
-                programme,
-                student_id: studentId,
-                year_of_study: yearOfStudy,
-                gender,
-                date_of_birth: dateOfBirth,
-                contact,
-                display_name: displayName,
-                is_onboarded: true
-            })
-            .eq('id', userIdToUpdate);
+        // 2. call our secure API to update the profile
+        // We use an API route because unverified users might not have 
+        // a session yet, which causes RLS to block client-side updates.
+        try {
+            const response = await fetch('/api/auth/onboarding', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: userIdToUpdate,
+                    onboardingData: {
+                        institution,
+                        programme,
+                        student_id: studentId,
+                        year_of_study: yearOfStudy,
+                        gender,
+                        date_of_birth: dateOfBirth,
+                        contact,
+                        display_name: displayName,
+                    }
+                })
+            });
 
-        setLoading(false);
-        if (updateError) {
-            setError(updateError.message);
+            const result = await response.json();
+            
+            if (!response.ok) {
+                setError(result.error || "Failed to update profile.");
+                setLoading(false);
+                return;
+            }
+        } catch (err) {
+            setError("Network error. Please try again.");
+            setLoading(false);
             return;
         }
+
+        setLoading(false);
 
         // If we came from registration (confirmed email is likely ON), show the check email UI
         if (uidFromUrl) {
@@ -134,16 +150,25 @@ const OnboardingForm = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                         </svg>
                     </div>
-                    <div className="space-y-3">
-                        <h2 className="text-3xl font-bold font-manyto">Welcome Aboard!</h2>
-                        <p className="text-zinc-600">
-                            Your profile is ready. Now, just verify your email to step into the hive.
+                    <div className="space-y-4">
+                        <h2 className="text-4xl font-bold font-manyto">Welcome</h2>
+                        <h3 className="text-2xl font-bold text-[#ffc107] -mt-2">Aboard the Hive!</h3>
+                        <p className="text-zinc-600 leading-relaxed pt-2">
+                            Your profile is ready. To keep our campus community safe, we need you to <span className="font-bold text-black border-b-2 border-[#ffc107]">click the link</span> we just sent to:
                         </p>
                         {emailFromUrl && (
-                            <p className="text-sm font-semibold text-black bg-[#ffc107]/10 py-2 px-4 rounded-full inline-block">
-                                {decodeURIComponent(emailFromUrl)}
-                            </p>
+                            <div className="bg-zinc-100 py-3 px-4 rounded-2xl flex items-center justify-center gap-2 border border-zinc-200 shadow-inner">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-[#ffc107]">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                                </svg>
+                                <span className="font-semibold text-black truncate max-w-xs">
+                                    {decodeURIComponent(emailFromUrl)}
+                                </span>
+                            </div>
                         )}
+                        <p className="text-xs text-zinc-400 italic">
+                            Once verified, you'll have full access to the campus hive!
+                        </p>
                     </div>
                     <div className="pt-4">
                         <Link 

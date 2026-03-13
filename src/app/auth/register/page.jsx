@@ -136,22 +136,7 @@ const RegisterPage = () => {
             return;
         }
 
-        // 2. Since the trigger handles initial row creation, we just need to update it with the extra info
-        if (authData?.user) {
-            const { error: updateError } = await supabase
-                .from('users')
-                .update({
-                    first_name: cleanFirstName,
-                    last_name: cleanLastName,
-                    username: cleanUsername,
-                    is_onboarded: false
-                })
-                .eq('id', authData.user.id);
-
-            if (updateError) {
-                console.error("Error updating public user profile:", updateError);
-            }
-        }
+        // Note: The database trigger handles the initial creation of the public.users record.
 
         setLoading(false);
 

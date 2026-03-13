@@ -18,6 +18,13 @@ const SignInPage = () => {
     const [resendLoading, setResendLoading] = useState(false);
     const [resendSuccess, setResendSuccess] = useState(false);
 
+    const handleKeyDown = (e, callback) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            callback(e);
+        }
+    };
+
     const handleResendEmail = async () => {
         setResendLoading(true);
         const supabase = createClient();
