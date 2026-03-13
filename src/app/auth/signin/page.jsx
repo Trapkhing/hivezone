@@ -12,25 +12,42 @@ const SignInPage = () => {
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+    const [showResend, setShowResend] = useState(false);
+    const [resendLoading, setResendLoading] = useState(false);
+    const [resendSuccess, setResendSuccess] = useState(false);
 
-    useEffect(() => {
-        if (error) {
-            window.scrollTo({ top: 0, behavior: "smooth" });
+    const handleResendEmail = async () => {
+        setResendLoading(true);
+        const supabase = createClient();
+        
+        let emailToResend = identifier;
+        if (!identifier.includes('@')) {
+            const { data } = await supabase.from('users').select('email').ilike('username', identifier).single();
+            if (data) emailToResend = data.email;
         }
-    }, [error]);
 
-    const handleKeyDown = (e, callback) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            callback(e);
+        const { error } = await supabase.auth.resend({
+            type: 'signup',
+            email: emailToResend.trim().toLowerCase(),
+            options: {
+                emailRedirectTo: `${window.location.origin}/auth/callback`,
+            }
+        });
+
+        setResendLoading(false);
+        if (error) {
+            setError(resendError.message);
+        } else {
+            setResendSuccess(true);
+            setShowResend(false);
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(null);
+        setShowResend(false);
+        setResendSuccess(false);
 
         if (!identifier || !password) {
             setError("Please fill in all fields.");
@@ -67,7 +84,8 @@ const SignInPage = () => {
 
         if (authError) {
             if (authError.message.includes("Email not confirmed")) {
-                setError("Please verify your email before signing in. Check your inbox for the verification link.");
+                setError("Please verify your email before signing in.");
+                setShowResend(true);
             } else {
                 setError(authError.message);
             }
@@ -88,6 +106,7 @@ const SignInPage = () => {
             if (!userRecord.email_verified) {
                 // If Supabase allows login without verification but we want to enforce it via our field
                 setError("Your email is not verified. Please check your inbox.");
+                setShowResend(true);
                 await supabase.auth.signOut();
                 return;
             }
@@ -148,8 +167,23 @@ const SignInPage = () => {
                 {/* Form Card */}
                 <form onSubmit={handleSubmit} className="w-full border-2 border-[#ffc107]/40 rounded-3xl p-6 sm:p-8 space-y-6">
                     {error && (
-                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm" role="alert">
-                            <span className="block sm:inline">{error}</span>
+                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl relative text-sm space-y-2" role="alert">
+                            <span className="block">{error}</span>
+                            {showResend && (
+                                <button
+                                    type="button"
+                                    onClick={handleResendEmail}
+                                    disabled={resendLoading}
+                                    className="text-[#ffc107] font-bold hover:underline disabled:opacity-50"
+                                >
+                                    {resendLoading ? "Sending..." : "Resend Verification Email"}
+                                </button>
+                            )}
+                        </div>
+                    )}
+                    {resendSuccess && (
+                        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl relative text-sm" role="alert">
+                            Verification email resent! Please check your inbox.
                         </div>
                     )}
                     {/* Identifier */}

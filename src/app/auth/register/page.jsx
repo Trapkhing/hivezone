@@ -163,6 +163,34 @@ const RegisterPage = () => {
         }
     };
 
+    const [resendLoading, setResendLoading] = useState(false);
+    const [resendCount, setResendCount] = useState(0);
+
+    const handleResendEmail = async () => {
+        if (resendCount >= 3) {
+            setError("Maximum resend attempts reached. Please try again later.");
+            return;
+        }
+
+        setResendLoading(true);
+        const supabase = createClient();
+        const { error: resendError } = await supabase.auth.resend({
+            type: 'signup',
+            email: email.trim().toLowerCase(),
+            options: {
+                emailRedirectTo: `${window.location.origin}/auth/callback`,
+            }
+        });
+
+        setResendLoading(false);
+        if (resendError) {
+            setError(resendError.message);
+        } else {
+            setResendCount(prev => prev + 1);
+            // Optional: show a small success message for resending
+        }
+    };
+
     if (isEmailSent) {
         return (
             <div className="min-h-screen bg-[#f5f5f5] text-zinc-900 font-sans flex flex-col items-center justify-center px-6">
@@ -172,18 +200,34 @@ const RegisterPage = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                         </svg>
                     </div>
-                    <h2 className="text-3xl font-bold">Check Your Email</h2>
-                    <p className="text-zinc-600">
-                        We've sent a verification link to <span className="font-semibold text-black">{email}</span>. 
-                        Please click the link to verify your account and continue.
-                    </p>
-                    <div className="pt-4">
+                    <div className="space-y-2">
+                        <h2 className="text-3xl font-bold">Check Your Email</h2>
+                        <p className="text-zinc-600">
+                            We've sent a verification link to <span className="font-semibold text-black">{email}</span>. 
+                        </p>
+                    </div>
+
+                    {error && (
+                        <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm border border-red-100">
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="flex flex-col gap-3 pt-4">
                         <Link 
                             href="/auth/signin" 
-                            className="bg-[#ffc107] text-black font-semibold px-8 py-3 rounded-full hover:bg-[#ffca2c] transition-colors"
+                            className="bg-[#2c2c2c] text-white font-semibold px-8 py-3.5 rounded-2xl hover:bg-black transition-colors"
                         >
                             Go to Sign In
                         </Link>
+                        
+                        <button 
+                            onClick={handleResendEmail}
+                            disabled={resendLoading || resendCount >= 3}
+                            className="text-zinc-500 text-sm font-semibold hover:text-[#ffc107] transition-colors disabled:opacity-50"
+                        >
+                            {resendLoading ? "Sending..." : resendCount > 0 ? `Resend Email (${3 - resendCount} left)` : "Didn't receive code? Resend Email"}
+                        </button>
                     </div>
                 </div>
             </div>
