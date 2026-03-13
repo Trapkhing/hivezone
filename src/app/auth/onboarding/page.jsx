@@ -200,10 +200,10 @@ const OnboardingForm = () => {
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 flex flex-col items-center px-6 pb-12">
+            <main className="flex-1 w-full flex flex-col items-center px-4 sm:px-6 max-w-md mx-auto pb-12">
                 {/* Hero Heading */}
                 <div className="mb-4 text-center">
-                    <h1 className="text-4xl md:text-5xl pt-4 md:pt-14 font-bold font-manyto text-black">
+                    <h1 className="text-4xl sm:text-5xl pt-4 sm:pt-14 font-bold font-manyto text-black">
                         Complete
                         <br />
                         Your <span className="font-manyto text-[#ffc107]">Profile</span>
@@ -223,7 +223,7 @@ const OnboardingForm = () => {
                 </div>
 
                 {/* Form Card */}
-                <form onSubmit={handleSubmit} className="w-full max-w-md border-2 border-[#ffc107]/40 rounded-[2rem] px-6 py-10 space-y-7 bg-white/50 backdrop-blur-sm">
+                <form onSubmit={handleSubmit} className="w-full max-w-md border-2 border-[#ffc107]/40 rounded-[2rem] p-6 sm:p-10 space-y-7 bg-white/50 backdrop-blur-sm">
                     {error && (
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm" role="alert">
                             <span className="block sm:inline">{error}</span>

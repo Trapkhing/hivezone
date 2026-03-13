@@ -149,7 +149,7 @@ const SignInPage = () => {
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 w-full flex flex-col items-center px-6 max-w-md mx-auto">
+            <main className="flex-1 w-full flex flex-col items-center px-4 sm:px-6 max-w-md mx-auto">
                 {/* Hero Heading */}
                 <div className="mb-8 mt-4 text-center">
                     <h1 className="text-5xl sm:text-6xl font-bold font-manyto leading-none">

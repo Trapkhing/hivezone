@@ -84,7 +84,7 @@ const UpdatePasswordPage = () => {
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 w-full flex flex-col items-center px-6 max-w-md mx-auto">
+            <main className="flex-1 w-full flex flex-col items-center px-4 sm:px-6 max-w-md mx-auto">
                 {/* Hero Heading */}
                 <div className="mb-6 mt-4 text-center">
                     <h1 className="text-4xl sm:text-5xl font-manyto leading-none text-black">

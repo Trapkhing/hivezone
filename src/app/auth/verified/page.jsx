@@ -23,24 +23,24 @@ const VerifiedPage = () => {
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 w-full flex flex-col items-center justify-center px-6 max-w-md mx-auto">
-                <div className="w-full bg-white border-2 border-[#ffc107]/40 rounded-[2.5rem] p-10 text-center space-y-8 shadow-sm">
+            <main className="flex-1 w-full flex flex-col items-center justify-center px-4 sm:px-6 max-w-md mx-auto">
+                <div className="w-full bg-white border-2 border-[#ffc107]/40 rounded-[2.5rem] p-6 sm:p-10 text-center space-y-8 shadow-sm">
                     {/* Success Icon */}
-                    <div className="w-24 h-24 bg-[#ffc107] rounded-full flex items-center justify-center mx-auto shadow-lg shadow-[#ffc107]/20">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-[#ffc107] rounded-full flex items-center justify-center mx-auto shadow-lg shadow-[#ffc107]/20">
                         <svg 
                             xmlns="http://www.w3.org/2000/svg" 
                             fill="none" 
                             viewBox="0 0 24 24" 
                             strokeWidth={3} 
                             stroke="black" 
-                            className="w-12 h-12"
+                            className="w-10 h-10 sm:w-12 sm:h-12"
                         >
                             <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                         </svg>
                     </div>
 
                     <div className="space-y-4">
-                        <h1 className="text-4xl font-bold font-manyto leading-tight">
+                        <h1 className="text-3xl sm:text-4xl font-bold font-manyto leading-tight">
                             Email
                             <br />
                             <span className="text-[#ffc107]">Verified!</span>

@@ -190,10 +190,10 @@ const RegisterPage = () => {
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 flex flex-col items-center px-6 pb-12">
+            <main className="flex-1 w-full flex flex-col items-center px-4 sm:px-6 max-w-md mx-auto pb-12">
                 {/* Hero Heading */}
-                <div className="mb-8">
-                    <h1 className="text-5xl md:text-6xl pt-14 font-bold font-manyto">
+                <div className="mb-8 mt-4 text-center">
+                    <h1 className="text-5xl sm:text-6xl pt-4 font-bold font-manyto">
                         Step
                         <br />
                         <span className="text-[#ffc107]">Into</span><span className="text-[#2c2c2c]">The</span><span className="text-[#ffc107]">Hive</span>
@@ -213,7 +213,7 @@ const RegisterPage = () => {
                 </div>
 
                 {/* Form Card */}
-                <form onSubmit={handleSubmit} className="w-full max-w-md border-2 border-[#ffc107]/40 rounded-[2rem] px-6 py-10 space-y-7">
+                <form onSubmit={handleSubmit} className="w-full max-w-md border-2 border-[#ffc107]/40 rounded-[2rem] p-6 sm:p-10 space-y-7">
 
                     {error && (
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm" role="alert">
@@ -232,7 +232,7 @@ const RegisterPage = () => {
                     </div>
 
                     {/* First Name & Last Name */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-semibold mb-2">First Name</label>
                             <input
@@ -257,30 +257,30 @@ const RegisterPage = () => {
                         </div>
                     </div>
 
-                    {/* Username */}
-                    <div>
-                        <label className="block text-sm font-semibold mb-2">Username</label>
-                        <input
-                            type="text"
-                            placeholder="netskiper"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            onKeyDown={(e) => handleKeyDown(e, handleSubmit)}
-                            className="w-full bg-transparent border border-zinc-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#ffc107] transition-colors"
-                        />
-                    </div>
-
-                    {/* Email */}
-                    <div>
-                        <label className="block text-sm font-semibold mb-2">Email</label>
-                        <input
-                            type="email"
-                            placeholder="example@gmail.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            onKeyDown={(e) => handleKeyDown(e, handleSubmit)}
-                            className="w-full bg-transparent border border-zinc-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#ffc107] transition-colors"
-                        />
+                    {/* Username & Email */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-semibold mb-2">Username</label>
+                            <input
+                                type="text"
+                                placeholder="netskiper"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(e, handleSubmit)}
+                                className="w-full bg-transparent border border-zinc-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#ffc107] transition-colors"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold mb-2">Email</label>
+                            <input
+                                type="email"
+                                placeholder="example@gmail.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(e, handleSubmit)}
+                                className="w-full bg-transparent border border-zinc-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#ffc107] transition-colors"
+                            />
+                        </div>
                     </div>
 
                     {/* Passwords */}
