@@ -34,7 +34,7 @@ const NotificationDrawer = ({
 
         switch (notif.entity_type) {
             case 'feed':
-                router.push(`/dashboard/feed`);
+                router.push(`/dashboard/feed/${notif.entity_id}`);
                 break;
             case 'gig':
                 router.push(`/dashboard/gigs/detail?id=${notif.entity_id}`);

@@ -40,11 +40,6 @@ export default function ProfilePage() {
     const [userGigs, setUserGigs] = useState([]);
     const [loadingContent, setLoadingContent] = useState(false);
 
-    // Feed interactions state
-    const [activeCommentId, setActiveCommentId] = useState(null);
-    const [commentsData, setCommentsData] = useState({});
-    const [commentInputs, setCommentInputs] = useState({});
-    const [loadingComments, setLoadingComments] = useState({});
 
     const supabase = createClient();
 
@@ -166,112 +161,6 @@ export default function ProfilePage() {
         }
     };
 
-    const fetchComments = async (postId) => {
-        if (commentsData[postId]) return;
-        setLoadingComments(prev => ({ ...prev, [postId]: true }));
-        try {
-            const { data, error } = await supabase
-                .from('feed_comments')
-                .select(`
-                    *,
-                    author:users (
-                        display_name,
-                        username,
-                        profile_picture
-                    )
-                `)
-                .eq('feed_id', postId)
-                .order('created_at', { ascending: true });
-
-            if (error) throw error;
-            setCommentsData(prev => ({ ...prev, [postId]: data }));
-        } catch (error) {
-            console.error("Error fetching comments:", error);
-            showToast("Failed to load comments.", "error");
-        } finally {
-            setLoadingComments(prev => ({ ...prev, [postId]: false }));
-        }
-    };
-
-    const handleCommentSubmit = async (postId) => {
-        const content = commentInputs[postId];
-        if (!content?.trim()) return;
-
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
-
-            const { data: newComment, error } = await supabase
-                .from('feed_comments')
-                .insert([{
-                    feed_id: postId,
-                    user_id: session.user.id,
-                    content: content.trim()
-                }])
-                .select(`
-                    *,
-                    author:users (
-                        display_name,
-                        username,
-                        profile_picture
-                    )
-                `)
-                .single();
-
-            if (error) throw error;
-
-            setCommentsData(prev => ({
-                ...prev,
-                [postId]: [...(prev[postId] || []), newComment]
-            }));
-            setCommentInputs(prev => ({ ...prev, [postId]: "" }));
-
-            // Update counts in posts
-            setUserPosts(prev => prev.map(p =>
-                p.id === postId ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p
-            ));
-
-
-
-        } catch (error) {
-            console.error("Error posting comment:", error);
-            showToast("Failed to post comment.", "error");
-        }
-    };
-
-    const handleDeleteComment = async (commentId, postId) => {
-        try {
-            const { error } = await supabase
-                .from('feed_comments')
-                .delete()
-                .eq('id', commentId);
-
-            if (error) throw error;
-
-            setCommentsData(prev => ({
-                ...prev,
-                [postId]: (prev[postId] || []).filter(c => c.id !== commentId)
-            }));
-
-            setUserPosts(prev => prev.map(p =>
-                p.id === postId ? { ...p, comments_count: Math.max(0, (p.comments_count || 1) - 1) } : p
-            ));
-
-            showToast("Comment deleted successfully.", "success");
-        } catch (error) {
-            console.error("Error deleting comment:", error);
-            showToast("Failed to delete comment.", "error");
-        }
-    };
-
-    const toggleComments = (postId) => {
-        if (activeCommentId === postId) {
-            setActiveCommentId(null);
-        } else {
-            setActiveCommentId(postId);
-            fetchComments(postId);
-        }
-    };
 
     const handleDeletePost = async (postId, mediaUrl) => {
         try {
@@ -635,14 +524,6 @@ export default function ProfilePage() {
                                                 onDelete={handleDeletePost}
                                                 onReport={handleReportPost}
                                                 onLike={handleLike}
-                                                activeCommentId={activeCommentId}
-                                                toggleComments={toggleComments}
-                                                commentsData={commentsData}
-                                                commentInputs={commentInputs}
-                                                setCommentInputs={setCommentInputs}
-                                                handleCommentSubmit={handleCommentSubmit}
-                                                handleDeleteComment={handleDeleteComment}
-                                                loadingComments={loadingComments}
                                             />
                                         ))
                                     ) : (

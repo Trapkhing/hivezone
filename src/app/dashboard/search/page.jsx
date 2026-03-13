@@ -31,11 +31,6 @@ function SearchResults() {
     const supabase = createClient();
     const { showToast, confirmAction, openReportModal } = useUI();
 
-    // States for Feeds
-    const [activeCommentId, setActiveCommentId] = useState(null);
-    const [commentsData, setCommentsData] = useState({});
-    const [commentInputs, setCommentInputs] = useState({});
-    const [loadingComments, setLoadingComments] = useState({});
 
     useEffect(() => {
         const getSession = async () => {
@@ -260,153 +255,6 @@ function SearchResults() {
         }
     };
 
-    const fetchComments = async (postId) => {
-        if (commentsData[postId]) return;
-        setLoadingComments(prev => ({ ...prev, [postId]: true }));
-        try {
-            const { data, error } = await supabase
-                .from('feed_comments')
-                .select(`
-                    *,
-                    author:users(display_name, username, profile_picture)
-                `)
-                .eq('feed_id', postId)
-                .order('created_at', { ascending: true });
-
-            if (error) throw error;
-            setCommentsData(prev => ({ ...prev, [postId]: data }));
-        } catch (error) {
-            console.error("Error fetching comments:", error);
-            showToast("Failed to load comments.", "error");
-        } finally {
-            setLoadingComments(prev => ({ ...prev, [postId]: false }));
-        }
-    };
-
-    const toggleComments = (postId) => {
-        if (activeCommentId === postId) {
-            setActiveCommentId(null);
-        } else {
-            setActiveCommentId(postId);
-            fetchComments(postId);
-        }
-    };
-
-    const handleCommentSubmit = async (postId) => {
-        const content = commentInputs[postId];
-        if (!content?.trim()) return;
-
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
-
-            const { data: newComment, error } = await supabase
-                .from('feed_comments')
-                .insert([{
-                    feed_id: postId,
-                    user_id: session.user.id,
-                    content: content.trim()
-                }])
-                .select(`
-                    *,
-                    author:users(display_name, username, profile_picture)
-                `)
-                .single();
-
-            if (error) throw error;
-
-            setCommentsData(prev => ({
-                ...prev,
-                [postId]: [...(prev[postId] || []), newComment]
-            }));
-            setCommentInputs(prev => ({ ...prev, [postId]: "" }));
-
-            setResults(prev => prev.map(p =>
-                p.id === postId ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p
-            ));
-
-            const post = results.find(p => p.id === postId);
-            if (post && post.user_id !== session.user.id) {
-                const { data: existingNotif } = await supabase
-                    .from('notifications')
-                    .select('id, actor_id')
-                    .eq('user_id', post.user_id)
-                    .eq('type', 'comment')
-                    .eq('entity_id', postId)
-                    .eq('is_read', false)
-                    .single();
-
-                if (existingNotif) {
-                    const othersCount = (post.comments_count || 0);
-                    const actorName = profile?.display_name || profile?.first_name || 'User';
-                    const message = othersCount > 0
-                        ? `${actorName} and ${othersCount} others commented on your post`
-                        : `commented on your post`;
-
-                    await supabase
-                        .from('notifications')
-                        .update({
-                            actor_id: session.user.id,
-                            message: message,
-                            created_at: new Date().toISOString()
-                        })
-                        .eq('id', existingNotif.id);
-                } else {
-                    await supabase.from('notifications').insert({
-                        user_id: post.user_id,
-                        actor_id: session.user.id,
-                        type: 'comment',
-                        entity_type: 'feed',
-                        entity_id: postId,
-                        message: `commented on your post`
-                    });
-
-                    fetch('/api/notifications/send', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            userIds: [post.user_id],
-                            title: profile?.display_name || profile?.first_name || 'User',
-                            message: `commented on your post\n"${content.trim()}"`,
-                            url: `${window.location.origin}/dashboard/feed`
-                        })
-                    }).catch(err => console.error("Push notification failed:", err));
-                }
-            }
-        } catch (error) {
-            console.error("Error posting comment:", error);
-            showToast("Failed to post comment.", "error");
-        }
-    };
-
-    const handleDeleteComment = async (commentId, postId) => {
-        confirmAction({
-            title: "Delete Comment",
-            message: "Are you sure you want to delete this comment?",
-            confirmText: "Delete",
-            type: "danger",
-            onConfirm: async () => {
-                try {
-                    const { error } = await supabase.from('feed_comments').delete().eq('id', commentId);
-                    if (error) throw error;
-
-                    setCommentsData(prev => ({
-                        ...prev,
-                        [postId]: (prev[postId] || []).filter(c => c.id !== commentId)
-                    }));
-
-                    setResults(prev => prev.map(p =>
-                        p.id === postId ? { ...p, comments_count: Math.max(0, (p.comments_count || 1) - 1) } : p
-                    ));
-
-                    showToast("Comment deleted successfully.", "success");
-                } catch (error) {
-                    console.error("Error deleting comment:", error);
-                    showToast("Failed to delete comment.", "error");
-                }
-            }
-        });
-    };
 
     return (
         <div className="flex flex-col min-h-screen bg-[#fcf6de] md:bg-[#fcf6de] pb-32 pt-4 md:pt-8 w-full">
@@ -590,14 +438,6 @@ function SearchResults() {
                                             onDelete={handleDeletePost}
                                             onReport={handleReportPost}
                                             onLike={handleLike}
-                                            activeCommentId={activeCommentId}
-                                            toggleComments={toggleComments}
-                                            commentsData={commentsData}
-                                            commentInputs={commentInputs}
-                                            setCommentInputs={setCommentInputs}
-                                            handleCommentSubmit={handleCommentSubmit}
-                                            handleDeleteComment={handleDeleteComment}
-                                            loadingComments={loadingComments}
                                         />
                                     ))}
                                 </div>

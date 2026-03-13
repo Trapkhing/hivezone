@@ -19,8 +19,7 @@ const MobileNotificationsPage = () => {
         // Route based on entity type
         switch (notif.entity_type) {
             case 'feed':
-                // Assuming we have a feed detail page or just go to feed
-                router.push(`/dashboard/feed`);
+                router.push(`/dashboard/feed/${notif.entity_id}`);
                 break;
             case 'gig':
                 router.push(`/dashboard/gigs/detail?id=${notif.entity_id}`);

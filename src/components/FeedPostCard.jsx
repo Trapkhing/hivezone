@@ -20,18 +20,9 @@ import Linkify from "@/components/ui/Linkify";
 export default function FeedPostCard({
     post,
     profile,
-    supabase,
     onDelete,
     onReport,
-    onLike,
-    activeCommentId,
-    toggleComments,
-    commentsData,
-    commentInputs,
-    setCommentInputs,
-    handleCommentSubmit,
-    handleDeleteComment,
-    loadingComments
+    onLike
 }) {
     const { showImage } = useUI();
     const menuRef = useRef(null);
@@ -81,69 +72,80 @@ export default function FeedPostCard({
 
             {/* Right: Content */}
             <div className="flex-1 flex flex-col gap-1.5 min-w-0">
-                {/* Post Header */}
-                <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-x-2 gap-y-1 flex-wrap min-w-0">
-                        <span className="font-bold text-gray-900 text-[16px]">
-                            {post.author?.display_name || post.author?.first_name}
-                        </span>
-                        {post.author?.is_verified && (
-                            <HugeiconsIcon icon={CheckmarkBadge01Icon} className="w-4 h-4 text-green-500 shrink-0" strokeWidth={2.5} />
-                        )}
-                        <span className="text-gray-500 text-[15px]">@{post.author?.username || 'user'}</span>
-                        <span className="text-[#ffc107] font-bold text-xl leading-none px-1 relative -top-1">.</span>
-                        <span className="text-gray-500 text-[15px] shrink-0 font-medium">{formatDate(post.created_at)}</span>
-                    </div>
+                {/* Wrap Header and Content in a Link for Detail Page */}
+                <Link href={`/dashboard/feed/${post.id}`} className="group/content flex-1 min-w-0">
+                    {/* Post Header */}
+                    <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-x-2 gap-y-1 flex-wrap min-w-0">
+                            <span className="font-bold text-gray-900 text-[16px] group-hover/content:text-[#ffc107] transition-colors">
+                                {post.author?.display_name || post.author?.first_name}
+                            </span>
+                            {post.author?.is_verified && (
+                                <HugeiconsIcon icon={CheckmarkBadge01Icon} className="w-4 h-4 text-green-500 shrink-0" strokeWidth={2.5} />
+                            )}
+                            <span className="text-gray-500 text-[15px]">@{post.author?.username || 'user'}</span>
+                            <span className="text-[#ffc107] font-bold text-xl leading-none px-1 relative -top-1">.</span>
+                            <span className="text-gray-500 text-[15px] shrink-0 font-medium">{formatDate(post.created_at)}</span>
+                        </div>
 
-                    {/* 3-Dot Menu */}
-                    <div className="relative shrink-0">
-                        <button
-                            onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
-                        >
-                            <HugeiconsIcon icon={MoreHorizontalCircle01Icon} className="w-5 h-5" strokeWidth={2} />
-                        </button>
-
-                        {isMenuOpen && (
-                            <div
-                                ref={menuRef}
-                                className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 overflow-hidden animate-in fade-in zoom-in duration-200"
+                        {/* 3-Dot Menu - Moved out of the link but logically here for UI */}
+                        <div className="relative shrink-0" onClick={(e) => e.preventDefault()}>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    setIsMenuOpen(!isMenuOpen);
+                                }}
+                                className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
                             >
-                                {profile?.id === post.user_id ? (
-                                    <button
-                                        onClick={() => {
-                                            setIsMenuOpen(false);
-                                            onDelete(post.id, post.media_url);
-                                        }}
-                                        className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors"
-                                    >
-                                        <HugeiconsIcon icon={Delete02Icon} className="w-4 h-4" strokeWidth={2} />
-                                        Delete Post
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={() => {
-                                            setIsMenuOpen(false);
-                                            onReport(post);
-                                        }}
-                                        className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold text-orange-600 hover:bg-orange-50 transition-colors"
-                                    >
-                                        <HugeiconsIcon icon={Alert01Icon} className="w-4 h-4" strokeWidth={2} />
-                                        Report Post
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
+                                <HugeiconsIcon icon={MoreHorizontalCircle01Icon} className="w-5 h-5" strokeWidth={2} />
+                            </button>
 
-                {/* Post Text */}
-                {post.content && (
-                    <Linkify 
-                        text={post.content} 
-                        className="text-gray-900 text-[16px] leading-[1.4] font-regular break-words pr-2" 
-                    />
-                )}
+                            {isMenuOpen && (
+                                <div
+                                    ref={menuRef}
+                                    className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 overflow-hidden animate-in fade-in zoom-in duration-200"
+                                >
+                                    {profile?.id === post.user_id ? (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsMenuOpen(false);
+                                                onDelete(post.id, post.media_url);
+                                            }}
+                                            className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors"
+                                        >
+                                            <HugeiconsIcon icon={Delete02Icon} className="w-4 h-4" strokeWidth={2} />
+                                            Delete Post
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsMenuOpen(false);
+                                                onReport(post);
+                                            }}
+                                            className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold text-orange-600 hover:bg-orange-50 transition-colors"
+                                        >
+                                            <HugeiconsIcon icon={Alert01Icon} className="w-4 h-4" strokeWidth={2} />
+                                            Report Post
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Post Text */}
+                    {post.content && (
+                        <div className="mt-1">
+                            <Linkify 
+                                text={post.content} 
+                                className="text-gray-900 text-[16px] leading-[1.4] font-regular break-words pr-2" 
+                            />
+                        </div>
+                    )}
+                </Link>
 
                 {post.media_url && (
                     <div className="relative w-full rounded-xl overflow-hidden mt-3 cursor-pointer group/img bg-gray-100 shadow-sm border border-gray-100/50 flex items-center justify-center min-h-[250px]">
@@ -187,98 +189,18 @@ export default function FeedPostCard({
                             <span className="text-[14px] font-bold">{post.likes_count || 0}</span>
                         </button>
 
-                        <button
-                            onClick={() => toggleComments(post.id)}
-                            className={`flex items-center gap-2 group transition-all ${activeCommentId === post.id ? 'text-[#ffc107]' : 'text-gray-500 hover:text-[#ffc107]'}`}
+                        <Link
+                            href={`/dashboard/feed/${post.id}`}
+                            className="flex items-center gap-2 group transition-all text-gray-500 hover:text-[#ffc107]"
                         >
-                            <div className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${activeCommentId === post.id ? 'bg-amber-50' : 'group-hover:bg-amber-50'}`}>
+                            <div className="w-9 h-9 flex items-center justify-center rounded-full transition-colors group-hover:bg-amber-50">
                                 <HugeiconsIcon icon={Comment01Icon} className="w-5 h-5" />
                             </div>
                             <span className="text-[14px] font-bold">{post.comments_count || 0}</span>
-                        </button>
+                        </Link>
                     </div>
                 </div>
 
-                {/* Comments Section */}
-                {activeCommentId === post.id && (
-                    <div className="mt-2 border-t border-gray-50 pt-4 pb-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                        {/* Comment List */}
-                        <div className="space-y-4 mb-4 max-h-[400px] overflow-y-auto px-1 custom-scrollbar">
-                            {loadingComments[post.id] ? (
-                                <div className="flex justify-center py-4">
-                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#ffc107]"></div>
-                                </div>
-                            ) : commentsData[post.id]?.length > 0 ? (
-                                commentsData[post.id].map(comment => (
-                                    <div key={comment.id} className="flex gap-3">
-                                        <Link 
-                                            href={`/dashboard/profile/${comment.author?.username || comment.user_id}`}
-                                            className="shrink-0"
-                                        >
-                                            <Avatar
-                                                src={comment.author?.profile_picture}
-                                                name={comment.author?.display_name}
-                                                className="w-8 h-8 rounded-full"
-                                            />
-                                        </Link>
-                                        <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-2">
-                                            <div className="flex items-center justify-between gap-2 mb-0.5">
-                                                <div className="flex items-center gap-2">
-                                                    <Link 
-                                                        href={`/dashboard/profile/${comment.author?.username || comment.user_id}`}
-                                                        className="font-bold text-xs text-gray-900 hover:underline"
-                                                    >
-                                                        {comment.author?.display_name}
-                                                    </Link>
-                                                    <span className="text-[10px] text-gray-400 font-medium">{formatDate(comment.created_at)}</span>
-                                                </div>
-                                                {profile?.id === comment.user_id && (
-                                                    <button
-                                                        onClick={() => handleDeleteComment(comment.id, post.id)}
-                                                        className="p-1 hover:bg-gray-200 rounded-full text-gray-400 hover:text-red-500 transition-colors"
-                                                    >
-                                                        <HugeiconsIcon icon={Delete02Icon} size={12} strokeWidth={2.5} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <Linkify text={comment.content} className="text-sm text-gray-800 break-words" />
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-center text-gray-400 text-sm py-4">No comments yet. Be the first!</p>
-                            )}
-                        </div>
-
-                        {/* Comment Input */}
-                        <div className="flex gap-3 items-center">
-                            <Avatar
-                                src={profile?.profile_picture}
-                                name={profile?.display_name || "User"}
-                                className="w-8 h-8 rounded-full shrink-0"
-                            />
-                            <div className="flex-1 relative">
-                                <input
-                                    type="text"
-                                    placeholder="Write a comment..."
-                                    value={commentInputs[post.id] || ""}
-                                    onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") handleCommentSubmit(post.id);
-                                    }}
-                                    className="w-full bg-gray-100 border-none outline-none rounded-2xl py-2 px-4 text-sm text-gray-800 placeholder:text-gray-400 pr-10"
-                                />
-                                <button
-                                    onClick={() => handleCommentSubmit(post.id)}
-                                    disabled={!commentInputs[post.id]?.trim()}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#ffc107] hover:text-[#ffca2c] disabled:opacity-50 transition-colors"
-                                >
-                                    <HugeiconsIcon icon={Comment01Icon} size={18} strokeWidth={2.5} />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
         </div>
     );
