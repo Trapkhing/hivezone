@@ -64,12 +64,16 @@ export const metadata = {
   manifest: "/manifest.json",
 };
 
+export const viewport = {
+  colorScheme: "light",
+};
+
 import { UIProvider } from "@/components/ui/UIProvider";
 import Script from "next/script";
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" style={{ colorScheme: 'light' }}>
       <head>
         <Script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" strategy="afterInteractive" />
         <Script id="onesignal-init" strategy="afterInteractive">
