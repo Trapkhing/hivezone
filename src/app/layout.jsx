@@ -31,7 +31,7 @@ const manyto = localFont({
 export const metadata = {
   metadataBase: new URL("https://hivezone.co"),
   title: {
-    default: "HiveZone | Your Campus Hub – Student Gigs, Study Circles & More",
+    default: "HiveZone | Student Gigs, Study Circles & More",
     template: "%s | HiveZone",
   },
   description: "HiveZone is a student-only platform for Ghanaian university students to find gigs, form study circles, discover internships & scholarships, and connect with peers. Join the hive today.",
