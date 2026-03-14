@@ -32,13 +32,14 @@ const ForgotPasswordPage = () => {
         const supabase = createClient();
 
         // Check if identifier is an email. If not, we might need to look up the email by username
-        let emailToReset = identifier;
+        const cleanIdentifier = identifier.trim().toLowerCase();
+        let emailToReset = cleanIdentifier;
 
-        if (!identifier.includes('@')) {
+        if (!cleanIdentifier.includes('@')) {
             const { data: userData, error: userError } = await supabase
                 .from('users')
                 .select('email')
-                .ilike('username', identifier)
+                .ilike('username', cleanIdentifier)
                 .single();
 
             if (userError || !userData) {

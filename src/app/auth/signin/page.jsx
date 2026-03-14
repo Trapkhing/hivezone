@@ -29,9 +29,10 @@ const SignInPage = () => {
         setResendLoading(true);
         const supabase = createClient();
         
-        let emailToResend = identifier;
-        if (!identifier.includes('@')) {
-            const { data } = await supabase.from('users').select('email').ilike('username', identifier).single();
+        const cleanIdentifier = identifier.trim().toLowerCase();
+        let emailToResend = cleanIdentifier;
+        if (!cleanIdentifier.includes('@')) {
+            const { data } = await supabase.from('users').select('email').ilike('username', cleanIdentifier).single();
             if (data) emailToResend = data.email;
         }
 
@@ -68,14 +69,15 @@ const SignInPage = () => {
 
         // Check if identifier is an email. If not, we might need to look up the email by username
         // For simplicity in V1, Supabase native Auth requires email.
-        let emailToLogin = identifier;
+        const cleanIdentifier = identifier.trim().toLowerCase();
+        let emailToLogin = cleanIdentifier;
 
-        if (!identifier.includes('@')) {
+        if (!cleanIdentifier.includes('@')) {
             // It's a username. We need to find the email.
             const { data: userData, error: userError } = await supabase
                 .from('users')
                 .select('email')
-                .ilike('username', identifier)
+                .ilike('username', cleanIdentifier)
                 .single();
 
             if (userError || !userData) {
