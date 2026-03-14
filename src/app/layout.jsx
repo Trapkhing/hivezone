@@ -31,7 +31,7 @@ const manyto = localFont({
 export const metadata = {
   metadataBase: new URL("https://hivezone.co"),
   title: {
-    default: "HiveZone | Student Gigs, Study Circles & More",
+    default: "HiveZone | Your Campus Hub",
     template: "%s | HiveZone",
   },
   description: "HiveZone is a student-only platform for Ghanaian university students to find gigs, form study circles, discover internships & scholarships, and connect with peers. Join the hive today.",
@@ -51,7 +51,7 @@ export const metadata = {
     canonical: "https://hivezone.co",
   },
   openGraph: {
-    title: "HiveZone | Your Campus Hub – Student Gigs, Study Circles & More",
+    title: "HiveZone | Student Gigs, Study Circles & More",
     description: "The student-only platform to find gigs, form study circles, discover internships, and connect with peers across Ghanaian universities.",
     url: "https://hivezone.co",
     siteName: "HiveZone",
