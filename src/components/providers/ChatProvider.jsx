@@ -42,7 +42,7 @@ export default function ChatProvider({ children }) {
             .select(`
                 *,
                 participants:conversation_participants(
-                    user:users(id, display_name, first_name, profile_picture, username)
+                    user:users(id, display_name, first_name, profile_picture, username, is_verified, is_admin)
                 ),
                 gig:gigs(title),
                 unread_messages:messages (id)

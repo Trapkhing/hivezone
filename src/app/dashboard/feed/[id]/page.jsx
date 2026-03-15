@@ -23,6 +23,7 @@ import Avatar from "@/components/ui/Avatar";
 import AutoPauseVideo from "@/components/ui/AutoPauseVideo";
 import Linkify from "@/components/ui/Linkify";
 import { FeedPostSkeleton } from "@/components/ui/Skeleton";
+import UserBadge from "@/components/ui/UserBadge";
 
 const Comment = ({ comment, allComments, depth = 0, setReplyingTo, setReplyContext, replyInputRef, formatDate, profile, handleDeleteComment }) => {
     const childComments = allComments.filter(c => c.parent_id === comment.id);
@@ -71,6 +72,11 @@ const Comment = ({ comment, allComments, depth = 0, setReplyingTo, setReplyConte
                 <div className="flex-1 min-w-0 flex flex-col gap-1.5 pt-0.5">
                     <div className="flex items-center gap-2 flex-wrap min-w-0">
                         <span className="font-bold text-gray-900 text-[15px] truncate">{comment.author?.display_name}</span>
+                        <UserBadge 
+                            isAdmin={comment.author?.is_admin} 
+                            isVerified={comment.author?.is_verified} 
+                            size="sm" 
+                        />
                         <div className="flex items-center gap-1 shrink-0">
                             <span className="text-gray-500 text-[14px]">@{comment.author?.username}</span>
                             <span className="text-gray-300">·</span>
@@ -220,7 +226,8 @@ export default function FeedDetailPage() {
                         display_name,
                         username,
                         profile_picture,
-                        is_verified
+                        is_verified,
+                        is_admin
                     ),
                     likes:feed_likes(user_id),
                     comments:feed_comments(count)
@@ -246,7 +253,9 @@ export default function FeedDetailPage() {
                     author:users (
                         display_name,
                         username,
-                        profile_picture
+                        profile_picture,
+                        is_verified,
+                        is_admin
                     )
                 `)
                 .eq("feed_id", id)
@@ -564,9 +573,11 @@ export default function FeedDetailPage() {
                             <div className="flex flex-col">
                                 <div className="flex items-center gap-1.5">
                                     <span className="font-bold text-gray-900 text-[18px] tracking-tight">{post.author?.display_name}</span>
-                                    {post.author?.is_verified && (
-                                        <HugeiconsIcon icon={CheckmarkBadge01Icon} className="w-[18px] h-[18px] text-green-500" strokeWidth={2.5} />
-                                    )}
+                                    <UserBadge 
+                                        isAdmin={post.author?.is_admin} 
+                                        isVerified={post.author?.is_verified} 
+                                        size="md"
+                                    />
                                 </div>
                                 <span className="text-gray-500 text-[15px] font-medium leading-none">@{post.author?.username}</span>
                             </div>

@@ -12,6 +12,7 @@ import {
     Comment01Icon,
     Image01Icon,
 } from "@hugeicons/core-free-icons";
+import UserBadge from "@/components/ui/UserBadge";
 import Avatar from "@/components/ui/Avatar";
 import AutoPauseVideo from "@/components/ui/AutoPauseVideo";
 import { useUI } from "@/components/ui/UIProvider";
@@ -80,9 +81,10 @@ export default function FeedPostCard({
                             <span className="font-bold text-gray-900 text-[16px] group-hover/content:text-[#ffc107] transition-colors">
                                 {post.author?.display_name || post.author?.first_name}
                             </span>
-                            {post.author?.is_verified && (
-                                <HugeiconsIcon icon={CheckmarkBadge01Icon} className="w-4 h-4 text-green-500 shrink-0" strokeWidth={2.5} />
-                            )}
+                            <UserBadge 
+                                isAdmin={post.author?.is_admin} 
+                                isVerified={post.author?.is_verified} 
+                            />
                             <span className="text-gray-500 text-[15px]">@{post.author?.username || 'user'}</span>
                             <span className="text-[#ffc107] font-bold text-xl leading-none px-1 relative -top-1">.</span>
                             <span className="text-gray-500 text-[15px] shrink-0 font-medium">{formatDate(post.created_at)}</span>
@@ -167,7 +169,8 @@ export default function FeedPostCard({
                                 alt="Post media"
                                 onClick={() => showImage(post.media_url)}
                                 onLoad={() => setIsMediaLoaded(true)}
-                                className={`w-full max-h-[250px] sm:max-h-[600px] object-cover transition-all duration-500 group-hover/img:scale-[1.02] ${isMediaLoaded ? 'opacity-100 relative z-20 bg-black' : 'opacity-0 absolute inset-0'}`}
+                                loading="lazy"
+                                className={`w-full max-h-[250px] sm:max-h-[600px] object-cover transition-all duration-700 group-hover/img:scale-[1.02] ${isMediaLoaded ? 'opacity-100 scale-100 blur-0 relative z-20 bg-black' : 'opacity-0 scale-105 blur-xl absolute inset-0'}`}
                             />
                         )}
                     </div>

@@ -18,6 +18,7 @@ import {
     Calendar01Icon
 } from "@hugeicons/core-free-icons";
 import CustomDropdown from "@/components/CustomDropdown";
+import UserBadge from "@/components/ui/UserBadge";
 
 const CATEGORIES = [
     "All Categories",
@@ -85,6 +86,7 @@ export default function GigsPage() {
                             display_name,
                             profile_picture,
                             is_verified,
+                            is_admin,
                             programme,
                             year_of_study,
                             username,
@@ -193,51 +195,88 @@ export default function GigsPage() {
                             onClick={() => router.push(`/dashboard/gigs/detail?id=${gigs[0].id}`)}
                             className="bg-[#fcfcfc] border-2 border-[#ffc107] rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 w-full max-w-[450px] shadow-sm relative z-10 cursor-pointer group"
                         >
-                            <div className="flex flex-col sm:flex-row gap-4 sm:gap-4 items-start sm:items-start">
-                                <div className="flex sm:flex-col items-center sm:items-center gap-3 sm:gap-2 w-full sm:w-[72px] shrink-0 border-b sm:border-b-0 border-gray-100 pb-3 sm:pb-0">
-                                    <div className="w-12 h-12 sm:w-[72px] sm:h-[72px] rounded-full object-cover shadow-sm border border-gray-100 overflow-hidden relative">
+                            <div className="flex flex-col sm:flex-row gap-4 items-start">
+                                {/* Desktop Sidebar: Avatar, Location, Date */}
+                                <div className="hidden sm:flex flex-col items-center gap-2 w-[72px] shrink-0">
+                                    <div className="w-[72px] h-[72px] rounded-full object-cover shadow-sm border border-gray-100 overflow-hidden relative">
                                         <Avatar
                                             src={gigs[0].author?.profile_picture}
                                             alt={gigs[0].author?.display_name || "Author"}
                                             size="full"
                                         />
                                     </div>
-                                    <div className="flex flex-col text-[11px] sm:text-[10px] text-gray-500 font-medium leading-tight text-left sm:text-center mt-0 sm:mt-1">
-                                        <div className="flex items-center gap-1.5 sm:flex-col sm:gap-1">
+                                    <div className="flex flex-col gap-2 text-[10px] font-medium leading-tight text-center">
+                                        <div className="flex flex-col items-center gap-1 text-gray-500">
                                             <HugeiconsIcon icon={Location01Icon} className="w-4 h-4" />
-                                            <span className="mt-0 sm:mt-1 font-bold text-gray-700">{gigs[0].location}</span>
+                                            <span className="mt-1 font-bold text-gray-700">{gigs[0].location}</span>
                                         </div>
+                                        {gigs[0].expected_due_date && (
+                                            <div className="flex flex-col items-center gap-1 text-orange-500">
+                                                <HugeiconsIcon icon={Calendar01Icon} className="w-4 h-4" />
+                                                <span className="font-bold">Due {new Date(gigs[0].expected_due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                            </div>
+                                        )}
                                     </div>
-                                    {gigs[0].expected_due_date && (
-                                        <div className="flex items-center gap-1.5 sm:flex-col sm:gap-1 mt-2 sm:mt-2 text-[11px] sm:text-[10px] font-medium leading-tight text-left sm:text-center">
-                                            <HugeiconsIcon icon={Calendar01Icon} className="w-4 h-4 text-orange-500" />
-                                            <span className="mt-0 sm:mt-0 font-bold text-orange-500">Due {new Date(gigs[0].expected_due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                                        </div>
-                                    )}
                                 </div>
 
-                                <div
-                                    className="flex flex-col flex-1 pl-0 sm:pl-3 w-full"
-                                >
-                                    <div className="flex justify-between items-start w-full">
-                                        <div className="flex items-center gap-1.5 mt-1 sm:mt-3">
-                                            <span className="text-[22px] sm:text-[26px] font-black font-newyork text-gray-900 truncate max-w-[150px] group-hover:text-[#ffc107] transition-colors">
+                                <div className="flex flex-col flex-1 w-full">
+                                    {/* Mobile Header: Avatar + Name + Badge */}
+                                    <div className="flex items-center gap-3 sm:hidden mb-3">
+                                        <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-100 shadow-sm shrink-0">
+                                            <Avatar
+                                                src={gigs[0].author?.profile_picture}
+                                                alt={gigs[0].author?.display_name || "Author"}
+                                                size="full"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-1">
+                                            <span className="text-[22px] font-black font-newyork text-gray-900 truncate max-w-[150px]">
                                                 {gigs[0].author?.display_name?.split(' ')[0]}
                                             </span>
-                                            {gigs[0].author?.is_verified && <HugeiconsIcon icon={CheckmarkBadge01Icon} className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />}
+                                            <UserBadge 
+                                                isAdmin={gigs[0].author?.is_admin} 
+                                                isVerified={gigs[0].author?.is_verified} 
+                                            />
                                         </div>
-                                        <span className="text-[22px] sm:text-[26px] font-black font-newyork text-gray-900 mt-1 sm:mt-3 flex items-center">
-                                            <span className="text-[18px] sm:text-[22px] font-sans pr-1">¢</span>
-                                            {gigs[0].price}
-                                        </span>
                                     </div>
 
-                                    <p className="font-bold text-gray-900 text-[14px] sm:text-[15px] leading-[1.4] mt-3 sm:mt-5 pr-0 sm:pr-2 line-clamp-2">
+                                    {/* Name & Price (Desktop view) */}
+                                    <div className="hidden sm:flex items-center gap-2 w-full">
+                                        <span className="text-[26px] font-black font-newyork text-gray-900 truncate max-w-[150px] group-hover:text-[#ffc107] transition-colors">
+                                            {gigs[0].author?.display_name?.split(' ')[0]}
+                                        </span>
+                                        <UserBadge 
+                                            isAdmin={gigs[0].author?.is_admin} 
+                                            isVerified={gigs[0].author?.is_verified} 
+                                        />
+                                    </div>
+
+                                    <span className="text-[22px] sm:text-[26px] font-black font-newyork text-gray-900 mt-0 sm:mt-3 flex items-center">
+                                        <span className="text-[18px] sm:text-[22px] font-sans pr-1">¢</span>
+                                        {gigs[0].price}
+                                    </span>
+
+                                    <p className="font-bold text-gray-900 text-[14px] sm:text-[15px] leading-[1.4] mt-2 sm:mt-5 pr-0 sm:pr-2 line-clamp-2">
                                         {gigs[0].title}
                                     </p>
+
+                                    {/* Mobile Footer: Location & Date */}
+                                    <div className="flex sm:hidden items-center gap-4 mt-4 pt-4 border-t border-gray-100">
+                                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-600">
+                                            <HugeiconsIcon icon={Location01Icon} className="w-3.5 h-3.5" />
+                                            {gigs[0].location}
+                                        </div>
+                                        {gigs[0].expected_due_date && (
+                                            <div className="flex items-center gap-1.5 text-[11px] font-bold text-orange-500">
+                                                <HugeiconsIcon icon={Calendar01Icon} className="w-3.5 h-3.5" />
+                                                Due {new Date(gigs[0].expected_due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
                     ) : (
                         <div className="bg-[#fcfcfc] border-2 border-dashed border-gray-300 rounded-[2rem] p-10 w-full max-w-[450px] flex items-center justify-center text-gray-400 font-medium">
                             No gigs posted yet
@@ -286,7 +325,10 @@ export default function GigsPage() {
                                     />
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="font-bold text-gray-900 text-sm">{gig.author?.display_name}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-gray-900 text-sm">{gig.author?.display_name}</span>
+                                        <UserBadge isAdmin={gig.author?.is_admin} isVerified={gig.author?.is_verified} size="sm" />
+                                    </div>
                                     <span className="text-[11px] text-gray-500 font-medium">
                                         {new Date(gig.created_at).toLocaleDateString()}
                                     </span>

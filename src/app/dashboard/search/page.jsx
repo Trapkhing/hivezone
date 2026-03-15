@@ -17,6 +17,7 @@ import Avatar from '@/components/ui/Avatar';
 import { getDisplayName } from '@/utils/stringUtils';
 import FeedPostCard from "@/components/FeedPostCard";
 import { useUI } from "@/components/ui/UIProvider";
+import UserBadge from "@/components/ui/UserBadge";
 
 function SearchResults() {
     const searchParams = useSearchParams();
@@ -81,7 +82,7 @@ function SearchResults() {
                 .from('gigs')
                 .select(`
                     *,
-                    author:users!inner(id, display_name, profile_picture, is_verified, username, institution)
+                    author:users!inner(id, display_name, profile_picture, is_verified, is_admin, username, institution)
                 `)
                 .eq('author.institution', institution)
                 .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
@@ -97,7 +98,7 @@ function SearchResults() {
                 .from('feeds')
                 .select(`
                     *,
-                    author:users!inner(display_name, username, profile_picture, is_verified, institution),
+                    author:users!inner(display_name, username, profile_picture, is_verified, is_admin, institution),
                     likes:feed_likes(user_id),
                     comments:feed_comments(count)
                 `)
@@ -329,9 +330,12 @@ function SearchResults() {
                                                 />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <h3 className="font-black text-gray-900 truncate">
-                                                    {user.computedName}
-                                                </h3>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-black text-gray-900 truncate">
+                                                        {user.computedName}
+                                                    </h3>
+                                                    <UserBadge isAdmin={user.is_admin} isVerified={user.is_verified} size="sm" />
+                                                </div>
                                                 <p className="text-xs font-bold text-gray-500">@{user.username || 'user'}</p>
                                                 {user.bio && (
                                                     <p className="text-xs text-gray-400 truncate mt-1">{user.bio}</p>
@@ -363,7 +367,14 @@ function SearchResults() {
                                                     />
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-gray-900 text-sm">{gig.author?.display_name}</span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="font-bold text-gray-900 text-sm">{gig.author?.display_name}</span>
+                                                        <UserBadge 
+                                                            isAdmin={gig.author?.is_admin} 
+                                                            isVerified={gig.author?.is_verified} 
+                                                            size="xs"
+                                                        />
+                                                    </div>
                                                     <span className="text-[11px] text-gray-500 font-medium">
                                                         {new Date(gig.created_at).toLocaleDateString()}
                                                     </span>

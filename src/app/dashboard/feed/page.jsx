@@ -78,6 +78,7 @@ export default function DedicatedFeedPage() {
                             username,
                             profile_picture,
                             is_verified,
+                            is_admin,
                             institution
                         ),
                         likes:feed_likes(user_id),
@@ -123,6 +124,7 @@ export default function DedicatedFeedPage() {
                             username,
                             profile_picture,
                             is_verified,
+                            is_admin,
                             institution
                         ),
                         likes:feed_likes(user_id),
@@ -288,6 +290,7 @@ export default function DedicatedFeedPage() {
                         username,
                         profile_picture,
                         is_verified,
+                        is_admin,
                         institution
                     )
                 `)

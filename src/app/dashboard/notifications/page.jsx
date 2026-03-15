@@ -6,6 +6,7 @@ import { useNotifications } from "@/components/providers/NotificationProvider";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Delete02Icon } from "@hugeicons/core-free-icons";
+import UserBadge from "@/components/ui/UserBadge";
 
 const MobileNotificationsPage = () => {
     const { notifications, loading, markAsRead, markAllAsRead, unreadCount, deleteNotification, clearAllNotifications } = useNotifications();
@@ -110,9 +111,16 @@ const MobileNotificationsPage = () => {
                         </div>
                         <div className="flex-1 min-w-0 flex flex-col pt-0.5">
                             <div className="flex justify-between items-start gap-2">
-                                <p className="text-[14px] font-bold text-gray-900 truncate leading-tight">
-                                    {notif.actor?.computedName || "User"}
-                                </p>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <p className="text-[14px] font-bold text-gray-900 truncate leading-tight">
+                                        {notif.actor?.computedName || "User"}
+                                    </p>
+                                    <UserBadge 
+                                        isAdmin={notif.actor?.is_admin} 
+                                        isVerified={notif.actor?.is_verified} 
+                                        size="xs"
+                                    />
+                                </div>
                                 <button
                                     onClick={(e) => handleDelete(e, notif.id)}
                                     className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-500 rounded-full hover:bg-red-100 transition-colors"

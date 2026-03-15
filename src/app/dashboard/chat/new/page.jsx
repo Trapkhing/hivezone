@@ -13,6 +13,7 @@ import ChatSidebar from "@/components/dashboard/ChatSidebar";
 import Avatar from "@/components/ui/Avatar";
 import { getDisplayName } from "@/utils/stringUtils";
 import { getOrCreateConversation } from "@/utils/chat";
+import UserBadge from "@/components/ui/UserBadge";
 
 function NewChatContent() {
     const searchParams = useSearchParams();
@@ -40,7 +41,7 @@ function NewChatContent() {
             // Fetch the other user's profile
             const { data: userData } = await supabase
                 .from("users")
-                .select("id, display_name, first_name, profile_picture, username")
+                .select("id, display_name, first_name, profile_picture, username, is_verified, is_admin")
                 .eq("id", otherUserId)
                 .single();
 
@@ -171,7 +172,14 @@ function NewChatContent() {
                                         />
                                     </div>
                                     <div className="min-w-0 flex flex-col justify-center">
-                                        <h2 className="text-[15px] font-black text-gray-900 leading-tight truncate">{displayName}</h2>
+                                        <div className="flex items-center gap-1.5">
+                                            <h2 className="text-[15px] font-black text-gray-900 leading-tight truncate">{displayName}</h2>
+                                            <UserBadge 
+                                                isAdmin={otherUser?.is_admin} 
+                                                isVerified={otherUser?.is_verified} 
+                                                size="sm"
+                                            />
+                                        </div>
                                         {otherUser?.username && (
                                             <span className="text-[12px] font-medium text-gray-500 truncate">@{otherUser.username}</span>
                                         )}

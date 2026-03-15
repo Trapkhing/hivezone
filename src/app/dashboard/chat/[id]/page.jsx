@@ -26,6 +26,7 @@ import { useChatConfig } from "@/components/providers/ChatProvider";
 import Avatar from "@/components/ui/Avatar";
 import { getDisplayName } from "@/utils/stringUtils";
 import Linkify from "@/components/ui/Linkify";
+import UserBadge from "@/components/ui/UserBadge";
 
 const downloadFile = async (url, fallbackName = 'attachment') => {
     try {
@@ -99,7 +100,7 @@ export default function ChatWindowPage() {
                 .select(`
                     *,
                     participants:conversation_participants(
-                        user:users(id, display_name, first_name, profile_picture, username)
+                        user:users(id, display_name, first_name, profile_picture, username, is_verified, is_admin)
                     ),
                     gig:gigs(
                         id, title, price, category,
@@ -508,7 +509,14 @@ export default function ChatWindowPage() {
                                 />
                             </div>
                             <div className="min-w-0 flex flex-col justify-center">
-                                <h2 className="text-[15px] font-black text-gray-900 leading-tight truncate">{conversation?.otherUser.computedName}</h2>
+                                <div className="flex items-center gap-1.5">
+                                    <h2 className="text-[15px] font-black text-gray-900 leading-tight truncate">{conversation?.otherUser.computedName}</h2>
+                                    <UserBadge 
+                                        isAdmin={conversation?.otherUser.is_admin} 
+                                        isVerified={conversation?.otherUser.is_verified} 
+                                        size="sm"
+                                    />
+                                </div>
                                 {conversation?.otherUser.username && (
                                     <span className="text-[12px] font-medium text-gray-500 truncate">@{conversation.otherUser.username}</span>
                                 )}

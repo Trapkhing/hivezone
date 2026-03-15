@@ -12,6 +12,7 @@ import { ConversationSkeleton } from "@/components/ui/Skeleton";
 import { useChatConfig } from "@/components/providers/ChatProvider";
 import { useUI } from "@/components/ui/UIProvider";
 import Avatar from "@/components/ui/Avatar";
+import UserBadge from "@/components/ui/UserBadge";
 
 export default function ChatSidebar({ activeId }) {
     const { conversations, loadingConversations, hideConversation } = useChatConfig();
@@ -66,9 +67,16 @@ export default function ChatSidebar({ activeId }) {
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-baseline mb-0.5">
-                                    <h3 className={`text-[15px] truncate font-extrabold ${chat.unreadCount > 0 ? 'text-black' : (activeId === chat.id ? 'text-gray-900' : 'text-gray-800')}`}>
-                                        {chat.otherUser.computedName}
-                                    </h3>
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <h3 className={`text-[15px] truncate font-extrabold ${chat.unreadCount > 0 ? 'text-black' : (activeId === chat.id ? 'text-gray-900' : 'text-gray-800')}`}>
+                                            {chat.otherUser.computedName}
+                                        </h3>
+                                        <UserBadge 
+                                            isAdmin={chat.otherUser.is_admin} 
+                                            isVerified={chat.otherUser.is_verified} 
+                                            size="sm"
+                                        />
+                                    </div>
                                     <span className={`text-[11px] font-bold shrink-0 ${chat.unreadCount > 0 ? 'text-[#ffc107]' : 'text-gray-400'}`}>
                                         {new Date(chat.updated_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                                     </span>

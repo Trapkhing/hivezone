@@ -31,7 +31,7 @@ export default function NotificationProvider({ children }) {
             .from('notifications')
             .select(`
                 *,
-                actor:users!actor_id (display_name, first_name, profile_picture, username)
+                actor:users!actor_id (display_name, first_name, profile_picture, username, is_verified, is_admin)
             `)
             .eq('user_id', session.user.id)
             .order('created_at', { ascending: false });

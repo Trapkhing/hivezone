@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import Avatar from "@/components/ui/Avatar";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CheckmarkBadge01Icon } from "@hugeicons/core-free-icons";
+import UserBadge from "@/components/ui/UserBadge";
 
 const RecentGigs = () => {
     const [gigs, setGigs] = useState([]);
@@ -41,6 +41,7 @@ const RecentGigs = () => {
                             display_name,
                             profile_picture,
                             is_verified,
+                            is_admin,
                             programme,
                             year_of_study,
                             username,
@@ -99,9 +100,11 @@ const RecentGigs = () => {
                                 <span className="font-bold text-gray-900 text-[14px]">
                                     {gig.author?.display_name?.split(' ')[0]}
                                 </span>
-                                {gig.author?.is_verified && (
-                                    <HugeiconsIcon icon={CheckmarkBadge01Icon} className="w-3.5 h-3.5 text-green-600" strokeWidth={2.5} />
-                                )}
+                                <UserBadge 
+                                    isAdmin={gig.author?.is_admin} 
+                                    isVerified={gig.author?.is_verified} 
+                                    size="sm" 
+                                />
                             </div>
 
                             <span className="text-[10px] text-gray-800 font-medium leading-tight mb-0.5 px-1 truncate w-full">

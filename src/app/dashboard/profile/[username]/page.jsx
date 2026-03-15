@@ -11,6 +11,7 @@ import Avatar from "@/components/ui/Avatar";
 import { getDisplayName } from "@/utils/stringUtils";
 import { useUI } from "@/components/ui/UIProvider";
 import FeedPostCard from "@/components/FeedPostCard";
+import UserBadge from "@/components/ui/UserBadge";
 
 export default function PublicProfilePage() {
     const router = useRouter();
@@ -85,6 +86,7 @@ export default function PublicProfilePage() {
                         username,
                         profile_picture,
                         is_verified,
+                        is_admin,
                         institution
                     ),
                     likes:feed_likes(user_id),
@@ -102,6 +104,7 @@ export default function PublicProfilePage() {
                         display_name,
                         profile_picture,
                         is_verified,
+                        is_admin,
                         username
                     )
                 `)
@@ -309,9 +312,16 @@ export default function PublicProfilePage() {
                             {/* Left Column (Info) */}
                             <div className="flex flex-col mt-2 md:mt-0">
                                 {/* Info Block */}
-                                <h1 className="text-[26px] md:text-3xl sm:text-[34px] font-black font-newyork text-gray-900 tracking-tight leading-none">
-                                    {getDisplayName(profile, "User")}
-                                </h1>
+                                <div className="flex items-center gap-3">
+                                    <h1 className="text-[26px] md:text-3xl sm:text-[34px] font-black font-newyork text-gray-900 tracking-tight leading-none">
+                                        {getDisplayName(profile, "User")}
+                                    </h1>
+                                    <UserBadge 
+                                        isAdmin={profile?.is_admin} 
+                                        isVerified={profile?.is_verified} 
+                                        size="lg"
+                                    />
+                                </div>
                                 <span className="text-[14px] font-medium mt-1 text-gray-500">
                                     {profile?.username ? `@${profile.username}` : ""}
                                 </span>

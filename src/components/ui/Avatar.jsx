@@ -19,7 +19,9 @@ export default function Avatar({ src, name = "", className = "" }) {
                 <img
                     src={src}
                     alt={name}
-                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    onLoad={(e) => e.target.classList.remove('opacity-0')}
+                    className="w-full h-full object-cover transition-opacity duration-300 opacity-0"
                 />
             </div>
         );

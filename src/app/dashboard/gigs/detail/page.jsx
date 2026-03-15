@@ -21,6 +21,7 @@ import {
     Calendar01Icon
 } from "@hugeicons/core-free-icons";
 import Linkify from "@/components/ui/Linkify";
+import UserBadge from "@/components/ui/UserBadge";
 
 function GigDetailContent() {
     const router = useRouter();
@@ -65,6 +66,7 @@ function GigDetailContent() {
                             display_name,
                             profile_picture,
                             is_verified,
+                            is_admin,
                             programme,
                             year_of_study,
                             username
@@ -374,7 +376,11 @@ function GigDetailContent() {
                             <div className="flex flex-col gap-0.5">
                                 <div className="flex items-center gap-1.5">
                                     <span className="font-extrabold text-gray-900 text-lg leading-tight">{gig.author?.display_name}</span>
-                                    {gig.author?.is_verified && <HugeiconsIcon icon={CheckmarkBadge01Icon} className="w-4 h-4 text-green-600" />}
+                                    <UserBadge 
+                                        isAdmin={gig.author?.is_admin} 
+                                        isVerified={gig.author?.is_verified} 
+                                        size="md" 
+                                    />
                                 </div>
                                 <span className="text-[11px] text-gray-800 font-bold opacity-80">{gig.author?.programme || "Student"}</span>
                                 <span className="text-[10px] text-gray-700 font-bold opacity-60 uppercase tracking-wider">{gig.author?.year_of_study || "Campus"}</span>

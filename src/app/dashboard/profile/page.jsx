@@ -16,6 +16,7 @@ import { ProfileSkeleton } from "@/components/ui/Skeleton";
 import Avatar from "@/components/ui/Avatar";
 import { getDisplayName } from "@/utils/stringUtils";
 import FeedPostCard from "@/components/FeedPostCard";
+import UserBadge from "@/components/ui/UserBadge";
 
 export default function ProfilePage() {
     const { showToast, openReportModal, showImage } = useUI();
@@ -80,8 +81,9 @@ export default function ProfilePage() {
                     author:users!inner (
                         display_name,
                         username,
-                        profile_picture,
+                        profile_picture,                        
                         is_verified,
+                        is_admin,
                         institution
                     ),
                     likes:feed_likes(user_id),
@@ -99,6 +101,7 @@ export default function ProfilePage() {
                         display_name,
                         profile_picture,
                         is_verified,
+                        is_admin,
                         username
                     )
                 `)
@@ -336,6 +339,7 @@ export default function ProfilePage() {
                             <img
                                 src={profile.cover_photo}
                                 alt="Cover Photo"
+                                loading="lazy"
                                 className="w-full h-full object-cover object-center md:rounded-t-[2.5rem] cursor-pointer hover:opacity-95 transition-opacity"
                                 onClick={() => showImage(profile.cover_photo)}
                             />
@@ -428,10 +432,16 @@ export default function ProfilePage() {
 
                             {/* Left Column (Info + Banner) */}
                             <div className="flex flex-col mt-2 md:mt-0">
-                                {/* Info Block */}
-                                <h1 className="text-[26px] md:text-3xl sm:text-[34px] font-black font-newyork text-gray-900 tracking-tight leading-none">
-                                    {getDisplayName(profile, "User")}
-                                </h1>
+                                <div className="flex items-center gap-2">
+                                    <h1 className="text-[26px] md:text-3xl sm:text-[34px] font-black font-newyork text-gray-900 tracking-tight leading-none">
+                                        {getDisplayName(profile, "User")}
+                                    </h1>
+                                    <UserBadge 
+                                        isAdmin={profile?.is_admin} 
+                                        isVerified={profile?.is_verified} 
+                                        size="lg"
+                                    />
+                                </div>
                                 <span className="text-[14px] font-medium mt-1 text-gray-500">
                                     {profile?.username ? `@${profile.username}` : ""}
                                 </span>
