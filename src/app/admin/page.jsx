@@ -123,7 +123,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Recent Activity Card */}
-            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col flex-1 shrink-0 min-h-[400px]">
+            <div className="bg-white rounded-none shadow-sm border border-gray-100 overflow-hidden flex flex-col flex-1 shrink-0 min-h-[400px]">
                 <div className="px-10 py-8 flex items-center justify-between shrink-0">
                     <h3 className="text-xl font-extrabold font-newyork text-gray-900">Live Activity Feed</h3>
                     <div className="flex items-center gap-2">

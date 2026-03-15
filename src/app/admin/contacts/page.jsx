@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Link from "next/link";
 import {
     Mail01Icon,
     Tick02Icon,
     Delete02Icon,
-    Copy01Icon
+    Copy01Icon,
+    SentIcon
 } from "@hugeicons/core-free-icons";
 import { createClient } from "@/utils/supabase/client";
 import { useUI } from "@/components/ui/UIProvider";
@@ -85,7 +87,7 @@ export default function AdminContactsPage() {
     if (isLoading) {
         return (
             <div className="h-full flex flex-col min-h-0">
-                <div className="bg-white rounded-[2.5rem] flex-1 flex flex-col overflow-hidden shadow-sm border border-gray-100 min-h-0">
+                <div className="bg-white rounded-none flex-1 flex flex-col overflow-hidden shadow-sm border border-gray-100 min-h-0">
                     <div className="overflow-x-auto flex-1 scrollbar-hide">
                         <table className="w-full text-left">
                             <thead className="bg-white border-b border-gray-50">
@@ -135,7 +137,7 @@ export default function AdminContactsPage() {
     return (
         <div className="h-full flex flex-col min-h-0">
             {/* Contacts Table Card */}
-            <div className="bg-white rounded-[2.5rem] flex-1 flex flex-col overflow-hidden shadow-sm border border-gray-100 min-h-0">
+            <div className="bg-white rounded-none flex-1 flex flex-col overflow-hidden shadow-sm border border-gray-100 min-h-0">
                 {contacts.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
                         <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6">
@@ -220,6 +222,13 @@ export default function AdminContactsPage() {
                                                         <HugeiconsIcon icon={Tick02Icon} className="w-3.5 h-3.5" />
                                                     </button>
                                                 )}
+                                                <Link 
+                                                    href={`/admin/contacts/send?phone=${encodeURIComponent(contact.phone_number)}`}
+                                                    className="w-8 h-8 rounded-full bg-yellow-50 text-yellow-600 flex items-center justify-center hover:bg-yellow-600 hover:text-white transition-all shadow-sm"
+                                                    title="Send SMS"
+                                                >
+                                                    <HugeiconsIcon icon={SentIcon} className="w-3.5 h-3.5" />
+                                                </Link>
                                                 <button
                                                     onClick={() => handleDeleteContact(contact.id)}
                                                     className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm"

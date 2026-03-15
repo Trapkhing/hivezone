@@ -108,7 +108,7 @@ export default function ReportsManagement() {
             </div>
 
             {/* Main Table Card */}
-            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col flex-1 shrink-0">
+            <div className="bg-white rounded-none shadow-sm border border-gray-100 overflow-hidden flex flex-col flex-1 shrink-0">
                 {loading ? (
                     <div className="flex flex-col items-center justify-center min-h-[500px] text-gray-300 gap-4">
                         <HugeiconsIcon icon={Loading03Icon} className="w-12 h-12 animate-spin" />
