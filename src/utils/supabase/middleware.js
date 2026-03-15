@@ -35,16 +35,30 @@ export async function updateSession(request) {
         data: { user },
     } = await supabase.auth.getUser()
 
-    // Protect the onboarding route based on setup
-    // if (
-    //   !user &&
-    //   !request.nextUrl.pathname.startsWith('/auth') &&
-    //   !request.nextUrl.pathname.startsWith('/_next')
-    // ) {
-    //   const url = request.nextUrl.clone()
-    //   url.pathname = '/auth/signin'
-    //   return NextResponse.redirect(url)
-    // }
+    // 1. Handle common auth entry pages (Signin, Register, etc.)
+    const authEntryPages = ['/auth/signin', '/auth/register', '/auth/forgot-password', '/auth/reset-password']
+    const isAuthPage = authEntryPages.some(page => request.nextUrl.pathname.startsWith(page))
+
+    if (user && isAuthPage) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
+        return NextResponse.redirect(url)
+    }
+
+    // 2. Handle Onboarding specifically
+    if (user && request.nextUrl.pathname.startsWith('/auth/onboarding')) {
+        const { data: profile } = await supabase
+            .from('users')
+            .select('is_onboarded')
+            .eq('id', user.id)
+            .single();
+
+        if (profile?.is_onboarded) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/dashboard'
+            return NextResponse.redirect(url)
+        }
+    }
 
     return supabaseResponse
 }

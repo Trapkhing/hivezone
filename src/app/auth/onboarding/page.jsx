@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import Footer from "@/components/Footer";
@@ -25,7 +25,7 @@ const PROGRAMS = [
     "Bsc Computer Science",
     "BA Business Administration",
     "BSc Information Technology",
-    "BSc Engineering",
+    "BSc Communication and Media Studies",
     "Bsc Nursing"
 ];
 
@@ -47,6 +47,34 @@ const OnboardingForm = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [isFinished, setIsFinished] = useState(false);
+
+    useEffect(() => {
+        const checkStatus = async () => {
+            const supabase = createClient();
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            // 1. Not logged in?
+            if (!session) {
+                // If we also don't have a UID in the URL, they shouldn't be here.
+                if (!uidFromUrl) {
+                    router.push("/auth/signin");
+                }
+                return;
+            }
+
+            // 2. Logged in? Check if they are already done with onboarding.
+            const { data: profile } = await supabase
+                .from('users')
+                .select('is_onboarded')
+                .eq('id', session.user.id)
+                .single();
+
+            if (profile?.is_onboarded) {
+                router.push("/dashboard");
+            }
+        };
+        checkStatus();
+    }, [router, uidFromUrl]);
 
     const handleKeyDown = (e, callback) => {
         if (e.key === 'Enter') {

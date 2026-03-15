@@ -9,8 +9,11 @@ import CustomDropdown from "@/components/CustomDropdown";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
     InstagramIcon,
-    SentIcon
+    SentIcon,
+    Alert01Icon
 } from "@hugeicons/core-free-icons";
+import { createClient } from "@/utils/supabase/client";
+import { useUI } from "@/components/ui/UIProvider";
 
 const SUBJECTS = [
     "General Inquiry",
@@ -24,19 +27,48 @@ export default function ContactPage() {
     const [formData, setFormData] = useState({
         name: "",
         email: "",
+        phone: "",
         subject: "",
         message: ""
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSent, setIsSent] = useState(false);
 
+    const supabase = createClient();
+    const { showToast } = useUI();
+
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
+        
+        if (!formData.name || !formData.email || !formData.phone || !formData.subject || !formData.message) {
+            showToast("Please fill in all fields", "error");
+            return;
+        }
+
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setIsSubmitting(false);
-        setIsSent(true);
-        setFormData({ name: "", email: "", subject: "", message: "" });
+        try {
+            const { error } = await supabase
+                .from('contacts')
+                .insert([{
+                    full_name: formData.name,
+                    email: formData.email,
+                    phone_number: formData.phone,
+                    subject: formData.subject,
+                    message: formData.message,
+                    status: 'pending'
+                }]);
+
+            if (error) throw error;
+
+            setIsSent(true);
+            setFormData({ name: "", email: "", subject: "", message: "" });
+            showToast("Message sent successfully!", "success");
+        } catch (error) {
+            console.error("Contact submission error:", error);
+            showToast("Failed to send message. Please try again.", "error");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -107,6 +139,18 @@ export default function ContactPage() {
                                         className="w-full bg-transparent border border-gray-600 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#ffc107] transition-colors"
                                     />
                                 </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold mb-2">Phone Number</label>
+                                <input
+                                    required
+                                    type="tel"
+                                    placeholder="+233 50 000 0000"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                    className="w-full bg-transparent border border-gray-600 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#ffc107] transition-colors"
+                                />
                             </div>
 
                             {/* Subject */}

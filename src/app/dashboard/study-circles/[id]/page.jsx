@@ -14,7 +14,7 @@ import {
     InformationCircleIcon,
     LockIcon,
     MoreVerticalIcon,
-    Logout01Icon,
+    LogoutCircle02Icon,
     Download01Icon,
     ArrowMoveUpLeftIcon,
     Settings02Icon
@@ -516,7 +516,7 @@ export default function StudyCircleDetailPage() {
                                     </Link>
                                 )}
                                 <button onClick={handleLeaveCircle} className="w-full px-4 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-3">
-                                    <HugeiconsIcon icon={Logout01Icon} className="w-4 h-4" />
+                                    <HugeiconsIcon icon={LogoutCircle02Icon} className="w-4 h-4" />
                                     Leave Circle
                                 </button>
                             </div>
@@ -668,9 +668,9 @@ export default function StudyCircleDetailPage() {
                                                                     </div>
                                                                 );
                                                             })()}
-                                                            <Linkify 
-                                                                text={msg.text} 
-                                                                className={`whitespace-pre-wrap ${msg.user_id === profile?.id ? 'text-black [&_a]:text-black [&_a]:underline' : ''}`} 
+                                                            <Linkify
+                                                                text={msg.text}
+                                                                className={`whitespace-pre-wrap ${msg.user_id === profile?.id ? 'text-black [&_a]:text-black [&_a]:underline' : ''}`}
                                                             />
                                                         </motion.div>
                                                     </div>

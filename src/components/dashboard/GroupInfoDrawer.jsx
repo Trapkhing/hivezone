@@ -9,7 +9,7 @@ import {
     Image01Icon,
     File01Icon,
     Link01Icon,
-    Logout01Icon,
+    LogoutCircle02Icon,
     Settings02Icon
 } from "@hugeicons/core-free-icons";
 import Link from "next/link";
@@ -158,7 +158,7 @@ export default function GroupInfoDrawer({ isOpen, onClose, circle, profile, onLe
                         onClick={onLeave}
                         className="w-full h-12 rounded-xl border border-red-100 bg-red-50 text-red-600 font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
                     >
-                        <HugeiconsIcon icon={Logout01Icon} className="w-4 h-4" />
+                        <HugeiconsIcon icon={LogoutCircle02Icon} className="w-4 h-4" />
                         Leave Study Circle
                     </button>
                 </div>

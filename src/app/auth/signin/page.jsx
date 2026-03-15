@@ -18,6 +18,17 @@ const SignInPage = () => {
     const [resendLoading, setResendLoading] = useState(false);
     const [resendSuccess, setResendSuccess] = useState(false);
 
+    useEffect(() => {
+        const checkSession = async () => {
+            const supabase = createClient();
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                router.push("/dashboard");
+            }
+        };
+        checkSession();
+    }, [router]);
+
     const handleKeyDown = (e, callback) => {
         if (e.key === 'Enter') {
             e.preventDefault();
