@@ -144,9 +144,9 @@ function UsersTableContent() {
                                                     {user.contact && (
                                                         <div className="flex items-center gap-2 group/phone mt-0.5">
                                                             <span className="text-[10px] font-bold text-gray-400">{user.contact}</span>
-                                                            <Link
-                                                                href={`/admin/contacts/send?phone=${encodeURIComponent(user.contact)}`}
-                                                                className="opacity-0 group-hover/phone:opacity-100 transition-opacity p-0.5 hover:bg-yellow-50 rounded text-yellow-600"
+                                                                    <Link
+                                                                        href={`/admin/contacts/send?phone=${encodeURIComponent(user.contact)}&name=${encodeURIComponent(user.display_name)}`}
+                                                                        className="opacity-0 group-hover/phone:opacity-100 transition-opacity p-0.5 hover:bg-yellow-50 rounded text-yellow-600"
                                                                 title="Send SMS"
                                                             >
                                                                 <HugeiconsIcon icon={SentIcon} className="w-2.5 h-2.5" />

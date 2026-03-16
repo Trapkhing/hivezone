@@ -36,30 +36,49 @@ export async function POST(request) {
     if (!apiKey) return NextResponse.json({ error: 'API Key not configured' }, { status: 500 })
 
     // 3. Prepare for Arkesel Call
-    // Note: recipients should be joined by comma for bulk
-    const phoneNumbers = Array.isArray(recipients) ? recipients.join(',') : recipients
+    // Normalize recipients to a clean array of numbers
+    const recipientsList = Array.isArray(recipients) 
+        ? recipients 
+        : typeof recipients === 'string' 
+            ? recipients.split(',').map(r => r.trim()).filter(Boolean)
+            : [recipients];
+
+    const phoneNumbers = recipientsList.join(',');
     
     try {
-        const arkeselUrl = `https://sms.arkesel.com/sms/api?action=send-sms&api_key=${apiKey}&to=${phoneNumbers}&from=${senderId}&sms=${encodeURIComponent(message)}`
+        const arkeselUrl = `https://sms.arkesel.com/sms/api?action=send-sms&api_key=${apiKey}&to=${phoneNumbers}&from=${senderId}&sms=${encodeURIComponent(message)}&response=json`
         
         const response = await fetch(arkeselUrl)
-        const result = await response.json()
+        let result;
+        
+        try {
+            result = await response.json()
+        } catch (e) {
+            const text = await response.text()
+            console.error('Arkesel non-JSON response:', text)
+            result = { code: 'error', msg: 'Invalid response from provider', raw: text }
+        }
 
         // 4. Log the attempt in Supabase
-        const logData = (Array.isArray(recipients) ? recipients : [recipients]).map(phone => ({
+        const isSuccess = result.code === 'ok' || result.code === '1000' || result.status === 'success';
+
+        const logData = recipientsList.map(phone => ({
             recipient_phone: phone,
             message_content: message,
-            status: result.code === 'ok' ? 'success' : 'failed',
+            status: isSuccess ? 'success' : 'failed',
             provider_response: result,
             admin_id: user.id
         }))
 
-        await supabase.from('sms_logs').insert(logData)
+        const { error: logError } = await supabase.from('sms_logs').insert(logData)
+        if (logError) {
+            console.error('Error logging SMS to DB:', logError)
+        }
 
-        if (result.code === 'ok') {
+        if (isSuccess) {
             return NextResponse.json({ success: true, result })
         } else {
-            return NextResponse.json({ success: false, error: result.msg || 'Arkesel error' }, { status: 400 })
+            return NextResponse.json({ success: false, error: result.msg || result.message || 'Arkesel error' }, { status: 400 })
         }
 
     } catch (error) {

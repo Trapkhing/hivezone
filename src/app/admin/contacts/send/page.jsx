@@ -5,12 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
     SentIcon,
-    ArrowLeft01Icon,
     UserCircleIcon,
     InformationCircleIcon,
     Loading03Icon,
     NoteIcon,
-    Tick02Icon
 } from "@hugeicons/core-free-icons";
 import { useUI } from "@/components/ui/UIProvider";
 import { createClient } from "@/utils/supabase/client";
@@ -21,6 +19,7 @@ function SMSComposer() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const phoneFromUrl = searchParams.get("phone") || "";
+    const nameFromUrl = searchParams.get("name") || "User";
     const { showToast } = useUI();
 
     const [recipient, setRecipient] = useState(phoneFromUrl);
@@ -54,6 +53,11 @@ function SMSComposer() {
     // Calculate SMS units (1 unit = 160 chars)
     const charCount = message.length;
     const units = Math.ceil(charCount / SMS_CHAR_LIMIT) || 0;
+
+    const applyTemplate = (content) => {
+        const personalized = content.replace(/{{name}}/g, nameFromUrl);
+        setMessage(personalized);
+    };
 
     const handleSend = async (e) => {
         e.preventDefault();
@@ -113,9 +117,9 @@ function SMSComposer() {
                                 <button
                                     key={t.id}
                                     type="button"
-                                    onClick={() => setMessage(t.content)}
+                                    onClick={() => applyTemplate(t.content)}
                                     className={`px-4 py-2 rounded-lg border-2 font-bold text-[10px] whitespace-nowrap transition-all
-                                        ${message === t.content ? 'bg-[#ffc107] border-[#ffc107] text-black shadow-sm' : 'bg-white border-gray-100 text-gray-400 hover:border-[#ffc107] hover:text-gray-900'}
+                                        ${message === t.content.replace(/{{name}}/g, nameFromUrl) ? 'bg-[#ffc107] border-[#ffc107] text-black shadow-sm' : 'bg-white border-gray-100 text-gray-400 hover:border-[#ffc107] hover:text-gray-900'}
                                     `}
                                 >
                                     {t.name}

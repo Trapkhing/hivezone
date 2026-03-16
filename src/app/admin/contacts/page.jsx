@@ -223,7 +223,7 @@ export default function AdminContactsPage() {
                                                     </button>
                                                 )}
                                                 <Link 
-                                                    href={`/admin/contacts/send?phone=${encodeURIComponent(contact.phone_number)}`}
+                                                    href={`/admin/contacts/send?phone=${encodeURIComponent(contact.phone_number)}&name=${encodeURIComponent(contact.full_name)}`}
                                                     className="w-8 h-8 rounded-full bg-yellow-50 text-yellow-600 flex items-center justify-center hover:bg-yellow-600 hover:text-white transition-all shadow-sm"
                                                     title="Send SMS"
                                                 >
