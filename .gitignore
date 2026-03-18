@@ -50,5 +50,8 @@ build_output.txt
 build_log.txt
 
 # plans
-arkesel_sms_plan.md
 study_circles_whatsapp_comparison.md
+marketplace_plan.md
+
+# supabase
+/supabase/.temp/
