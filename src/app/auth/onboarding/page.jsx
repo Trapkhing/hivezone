@@ -47,6 +47,9 @@ const OnboardingForm = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [isFinished, setIsFinished] = useState(false);
+    const [resendLoading, setResendLoading] = useState(false);
+    const [resendSuccess, setResendSuccess] = useState(false);
+    const [resendCount, setResendCount] = useState(0);
 
     useEffect(() => {
         const checkStatus = async () => {
@@ -93,6 +96,47 @@ const OnboardingForm = () => {
             setDisplayDOB(`${day}/${month}/${shortYear}`);
         } else {
             setDisplayDOB("");
+        }
+    };
+
+    const handleResendEmail = async () => {
+        if (resendCount >= 3) {
+            setError("Maximum resend attempts reached. Please try again later.");
+            return;
+        }
+
+        setResendLoading(true);
+        setResendSuccess(false);
+        const supabase = createClient();
+
+        // Get the email: from URL params or from the current session
+        let emailToResend = emailFromUrl ? decodeURIComponent(emailFromUrl) : null;
+
+        if (!emailToResend) {
+            const { data: { session } } = await supabase.auth.getSession();
+            emailToResend = session?.user?.email;
+        }
+
+        if (!emailToResend) {
+            setError("Could not determine your email. Please try signing in.");
+            setResendLoading(false);
+            return;
+        }
+
+        const { error: resendError } = await supabase.auth.resend({
+            type: 'signup',
+            email: emailToResend.trim().toLowerCase(),
+            options: {
+                emailRedirectTo: `${window.location.origin}/auth/callback`,
+            }
+        });
+
+        setResendLoading(false);
+        if (resendError) {
+            setError(resendError.message);
+        } else {
+            setResendSuccess(true);
+            setResendCount(prev => prev + 1);
         }
     };
 
@@ -198,7 +242,37 @@ const OnboardingForm = () => {
                             Once verified, you'll have full access to the campus hive!
                         </p>
                     </div>
-                    <div className="pt-4">
+
+                    {/* Resend Verification Email */}
+                    {resendSuccess && (
+                        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl text-sm font-medium">
+                            ✓ Verification email resent! Check your inbox.
+                        </div>
+                    )}
+                    {error && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm font-medium">
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="pt-2 space-y-3">
+                        <button
+                            type="button"
+                            onClick={handleResendEmail}
+                            disabled={resendLoading || resendCount >= 3}
+                            className="w-full bg-zinc-100 text-zinc-700 font-bold py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                        >
+                            {resendLoading ? (
+                                <>
+                                    <span className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin"></span>
+                                    <span>Sending...</span>
+                                </>
+                            ) : resendCount >= 3 ? (
+                                <span>Max resends reached</span>
+                            ) : (
+                                <span>Didn't get it? Resend Email</span>
+                            )}
+                        </button>
                         <Link 
                             href="/auth/signin" 
                             className="w-full bg-[#ffc107] text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-[#ffca2c] transition-colors"
