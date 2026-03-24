@@ -85,8 +85,13 @@ export const metadata = {
     },
   },
   icons: {
-    icon: "/logoIcon.svg",
-    apple: "/appIcon.png",
+    icon: [
+      { url: "/logoIcon.svg", type: "image/svg+xml" },
+      { url: "/appIcon.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [
+      { url: "/appIcon.png", sizes: "180x180", type: "image/png" },
+    ],
   },
   manifest: "/manifest.json",
   appleWebApp: {
@@ -97,6 +102,7 @@ export const metadata = {
 };
 
 export const viewport = {
+  themeColor: "#ffc107",
   colorScheme: "light",
 };
 
