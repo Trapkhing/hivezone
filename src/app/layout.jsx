@@ -85,13 +85,8 @@ export const metadata = {
     },
   },
   icons: {
-    icon: [
-      { url: "/logoIcon.svg", type: "image/svg+xml" },
-      { url: "/appIcon.png", sizes: "192x192", type: "image/png" },
-    ],
-    apple: [
-      { url: "/appIcon.png", sizes: "180x180", type: "image/png" },
-    ],
+    icon: "/logoIcon.svg",
+    apple: "/appIcon.png",
   },
   manifest: "/manifest.json",
   appleWebApp: {
