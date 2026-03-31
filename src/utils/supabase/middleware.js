@@ -35,6 +35,18 @@ export async function updateSession(request) {
         data: { user },
     } = await supabase.auth.getUser()
 
+    // 0. Handle Capacitor Mobile App Smart Routing
+    const isCapacitorApp = request.headers.get('user-agent')?.includes('CapacitorApp');
+    if (isCapacitorApp && request.nextUrl.pathname === '/') {
+        const url = request.nextUrl.clone();
+        if (user) {
+            url.pathname = '/dashboard';
+        } else {
+            url.pathname = '/app-welcome';
+        }
+        return NextResponse.redirect(url);
+    }
+
     // 1. Handle common auth entry pages (Signin, Register, etc.)
     const authEntryPages = ['/auth/signin', '/auth/register', '/auth/forgot-password', '/auth/reset-password']
     const isAuthPage = authEntryPages.some(page => request.nextUrl.pathname.startsWith(page))
