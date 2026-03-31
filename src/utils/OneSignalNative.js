@@ -1,8 +1,11 @@
 import OneSignal from 'react-onesignal';
 
 const ONESIGNAL_APP_ID = "b9314dfb-651e-4f29-b1e9-c1f6f2300b0e";
+let initialized = false;
 
 export const initOneSignal = async () => {
+    if (initialized) return;
+    
     // Check if running in Capacitor
     const isCapacitor = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
 
@@ -34,6 +37,8 @@ export const initOneSignal = async () => {
             console.error("Web OneSignal Error:", e);
         }
     }
+
+    initialized = true;
 };
 
 export const loginOneSignal = async (externalId) => {

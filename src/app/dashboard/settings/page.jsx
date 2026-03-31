@@ -5,15 +5,16 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useUI } from "@/components/ui/UIProvider";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertIcon, ArrowLeft01Icon, Camera01Icon, Download01Icon } from "@hugeicons/core-free-icons";
+import { AlertIcon, ArrowLeft01Icon, Camera01Icon, Notification01Icon } from "@hugeicons/core-free-icons";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import { useRef } from "react";
+import { getNotificationPermissionStatus, requestNotificationPermission } from "@/utils/OneSignalNative";
 
 // Menu items based on the user's design image
 const menuItems = [
     { id: "profile", label: "Edit Profile" },
     { id: "password", label: "Change Password" },
-    { id: "install", label: "Install App" },
+    { id: "notifications", label: "Notifications" },
     { id: "delete", label: "Delete Account", isDestructive: true }
 ];
 
@@ -34,6 +35,8 @@ export default function SettingsPage() {
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef(null);
     const [bioVisibility, setBioVisibility] = useState("everybody"); // everybody, contacts, nobody
+    const [notificationPermission, setNotificationPermission] = useState("default"); // granted, denied, default
+    const [checkingNotifications, setCheckingNotifications] = useState(false);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -66,6 +69,43 @@ export default function SettingsPage() {
 
         fetchUser();
     }, [router, supabase]);
+
+    // Check notification status when switching to the tab
+    useEffect(() => {
+        if (activeTab === "notifications") {
+            const checkPermission = async () => {
+                setCheckingNotifications(true);
+                try {
+                    const status = await getNotificationPermissionStatus();
+                    setNotificationPermission(status || "default");
+                } catch (e) {
+                    console.error("Error checking notification status:", e);
+                } finally {
+                    setCheckingNotifications(false);
+                }
+            };
+            checkPermission();
+        }
+    }, [activeTab]);
+
+    const handleEnableNotifications = async () => {
+        setCheckingNotifications(true);
+        try {
+            const result = await requestNotificationPermission();
+            // result might be boolean (native) or string (web)
+            const status = await getNotificationPermissionStatus();
+            setNotificationPermission(status);
+            
+            if (status === 'granted') {
+                showToast("Notifications enabled!");
+            }
+        } catch (error) {
+            console.error("Error enabling notifications:", error);
+            showToast("Failed to enable notifications.", "error");
+        } finally {
+            setCheckingNotifications(false);
+        }
+    };
 
     const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
@@ -373,22 +413,40 @@ export default function SettingsPage() {
 
                     {/* Views for notifications and privacy are removed for now */}
 
-                    {/* View: Install App */}
-                    {activeTab === "install" && (
+                    {/* View: Notifications */}
+                    {activeTab === "notifications" && (
                         <div className="bg-white rounded-[2.5rem] p-8 shadow-sm flex flex-col items-center justify-center min-h-[300px] text-center">
                             <div className="w-16 h-16 bg-yellow-50 rounded-full flex items-center justify-center mb-4">
-                                <HugeiconsIcon icon={Download01Icon} className="w-8 h-8 text-[#ffc107]" />
+                                <HugeiconsIcon icon={Notification01Icon} className="w-8 h-8 text-[#ffc107]" />
                             </div>
-                            <h3 className="text-xl font-black text-gray-900 mb-2 font-newyork">Install HiveZone App</h3>
+                            <h3 className="text-xl font-black text-gray-900 mb-2 font-newyork">Campus Notifications</h3>
                             <p className="text-gray-500 font-medium text-sm max-w-xs mb-8">
-                                Install HiveZone on your device for quick access, offline support, and push notifications.
+                                Stay updated on local campus gigs, study circle messages, and important alerts in your zone.
                             </p>
-                            <button
-                                onClick={() => window.dispatchEvent(new Event('hivezone-show-pwa-install'))}
-                                className="font-extrabold text-[15px] bg-[#ffc107] text-gray-900 px-8 py-3 rounded-full hover:bg-yellow-400 transition-colors active:scale-[0.98] shadow-lg shadow-yellow-100"
-                            >
-                                Open Install Modal
-                            </button>
+
+                            <div className="flex flex-col items-center gap-4 w-full">
+                                <div className={`px-4 py-2 rounded-full text-[11px] font-black uppercase tracking-widest border
+                                    ${notificationPermission === 'granted' ? 'bg-green-50 text-green-600 border-green-100' : 
+                                      notificationPermission === 'denied' ? 'bg-red-50 text-red-600 border-red-100' : 
+                                      'bg-gray-50 text-gray-400 border-gray-100'}
+                                `}>
+                                    Status: {notificationPermission === 'default' ? 'Not Set' : notificationPermission}
+                                </div>
+
+                                {notificationPermission !== 'granted' ? (
+                                    <button
+                                        onClick={handleEnableNotifications}
+                                        disabled={checkingNotifications}
+                                        className="font-extrabold text-[15px] bg-[#ffc107] text-gray-900 px-8 py-3 rounded-full hover:bg-yellow-400 transition-colors active:scale-[0.98] shadow-lg shadow-yellow-100 disabled:opacity-50"
+                                    >
+                                        {checkingNotifications ? "Please Wait..." : "Enable Notifications"}
+                                    </button>
+                                ) : (
+                                    <div className="text-[13px] text-gray-400 font-medium">
+                                        Notifications are currently active on this device.
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 

@@ -6,6 +6,12 @@ import Image from 'next/image';
 const Footer = () => {
     const currentYear = new Date().getFullYear();
 
+    // Hide footer on mobile app (Capacitor) specifically for auth pages
+    const isCapacitor = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
+    const isAuthPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/auth');
+
+    if (isCapacitor && isAuthPage) return null;
+
     return (
         <footer className="w-full bg-black text-white px-7 py-4">
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
