@@ -652,7 +652,7 @@ export default function FeedDetailPage() {
                 </div>
 
                 {/* Fixed Bottom Reply Bar Container */}
-                <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-[#fcf6de] via-[#fcf6de] to-transparent z-40">
+                <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 pb-safe bg-gradient-to-t from-[#fcf6de] via-[#fcf6de] to-transparent z-40">
                     <div className="max-w-[700px] mx-auto">
                         
                         {/* Reply Context Indicator */}
