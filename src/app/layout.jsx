@@ -102,6 +102,7 @@ export const viewport = {
 };
 
 import { UIProvider } from "@/components/ui/UIProvider";
+import CapacitorInit from "@/components/CapacitorInit";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -135,6 +136,7 @@ export default function RootLayout({ children }) {
         className={`${newYork.variable} ${inter.variable} ${manyto.variable} antialiased`}
       >
         <UIProvider>
+          <CapacitorInit />
           {children}
           <Analytics />
           <SpeedInsights />
@@ -143,3 +145,4 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
+
