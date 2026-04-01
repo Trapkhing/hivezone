@@ -137,36 +137,6 @@ const NotificationDrawer = ({
                                 {/* Content */}
                                 <div className="flex-1 overflow-y-auto custom-scrollbar p-3">
                                     {/* Push Notification Opt-in Banner */}
-                                    {/* Push Notification Toggle Section */}
-                                    <div className="mb-4 p-4 bg-gray-50 border border-gray-100 rounded-[2rem] flex items-center justify-between shadow-sm group hover:border-[#ffc107]/30 transition-all duration-300">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-gray-50">
-                                                <HugeiconsIcon icon={Notification01Icon} className={`w-5 h-5 ${hasPushPermission ? 'text-[#ffc107]' : 'text-gray-400'}`} strokeWidth={2} />
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-[14px] font-black text-gray-900 tracking-tight">Push Alerts</span>
-                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                                    {hasPushPermission ? 'Active' : 'Off'}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <button
-                                            onClick={handleEnablePush}
-                                            disabled={hasPushPermission}
-                                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-500 outline-none
-                                                ${hasPushPermission ? 'bg-[#ffc107] shadow-lg shadow-yellow-100' : 'bg-gray-200'}
-                                                ${hasPushPermission ? 'cursor-default' : 'cursor-pointer hover:scale-105 active:scale-95'}
-                                            `}
-                                        >
-                                            <span className="sr-only">Toggle Push Alerts</span>
-                                            <span
-                                                className={`${
-                                                    hasPushPermission ? 'translate-x-6 bg-white shadow-sm' : 'translate-x-1.5 bg-gray-400'
-                                                } inline-block h-4.5 w-4.5 transform rounded-full transition-all duration-500 ease-in-out`}
-                                            />
-                                        </button>
-                                    </div>
 
                                     {notifications.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center h-full text-center px-6">
