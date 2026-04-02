@@ -426,7 +426,7 @@ const Navbar = () => {
                         </div>
 
                         {/* Footer (Logout) */}
-                        <div className="p-4 border-t border-gray-100">
+                        <div className="p-4 pb-24 pb-safe border-t border-gray-100">
                             <button onClick={handleSignOut} className="w-full px-4 py-3.5 rounded-2xl hover:bg-red-50 flex items-center gap-4 text-red-600 transition-colors">
                                 <HugeiconsIcon icon={LogoutCircle02Icon} className="w-[22px] h-[22px]" />
                                 <span className="font-bold text-[16px]">Sign Out</span>
