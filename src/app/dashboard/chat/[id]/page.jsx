@@ -20,6 +20,7 @@ import {
     ArrowMoveUpLeftIcon,
 } from "@hugeicons/core-free-icons";
 import ChatSidebar from "@/components/dashboard/ChatSidebar";
+import ChatInfoDrawer from "@/components/dashboard/ChatInfoDrawer";
 import { MessageSkeleton } from "@/components/ui/Skeleton";
 import { useUI } from "@/components/ui/UIProvider";
 import { useChatConfig } from "@/components/providers/ChatProvider";
@@ -28,6 +29,7 @@ import { getDisplayName } from "@/utils/stringUtils";
 import Linkify from "@/components/ui/Linkify";
 import UserBadge from "@/components/ui/UserBadge";
 import { compressForChat } from "@/utils/compressImage";
+import AutoPauseVideo from "@/components/ui/AutoPauseVideo";
 
 const downloadFile = async (url, fallbackName = 'attachment') => {
     try {
@@ -61,10 +63,10 @@ export default function ChatWindowPage() {
     const router = useRouter();
     const supabase = createClient();
     const { confirmAction, showToast, openReportModal, showImage } = useUI();
-    const { setActiveConversation, refreshUnreadCount, messagesCache, updateMessagesCache } = useChatConfig();
+    const { setActiveConversation, refreshUnreadCount, messagesCache, updateMessagesCache, conversations } = useChatConfig();
 
     const [messages, setMessages] = useState(messagesCache[id] || []);
-    const [conversation, setConversation] = useState(null);
+    const [conversation, setConversation] = useState(conversations.find(c => c.id === id) || null);
     const [currentUser, setCurrentUser] = useState(null);
     const [newMessage, setNewMessage] = useState("");
     const [loading, setLoading] = useState(!messagesCache[id]);
@@ -76,17 +78,82 @@ export default function ChatWindowPage() {
     const [attachmentPreviews, setAttachmentPreviews] = useState([]);
     const [isSending, setIsSending] = useState(false);
     const [replyingTo, setReplyingTo] = useState(null);
+    const [isInfoOpen, setIsInfoOpen] = useState(false);
+
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [offset, setOffset] = useState(0);
+    const limit = 70;
+
+    // Helper to mark messages as read
+    const markAsRead = async () => {
+        if (!document.hasFocus()) return;
+        
+        const { error } = await supabase.rpc('mark_messages_as_read', {
+            p_conversation_id: id,
+            p_user_id: currentUser?.id || (await supabase.auth.getSession()).data.session?.user.id
+        });
+        
+        if (error) console.error("Error marking messages as read:", error);
+    };
 
     // Register this chat as the active conversation so the global provider
     // skips incrementing unread counts for messages arriving here
     useEffect(() => {
+        if (!id) return;
+        
         setActiveConversation(id);
+        markAsRead(); // Initial mark as read if focused
+
         return () => {
             setActiveConversation(null);
             // Refresh to get the true DB count after leaving
             refreshUnreadCount();
         };
     }, [id, setActiveConversation, refreshUnreadCount]);
+
+    const fetchMoreMessages = async () => {
+        if (loadingMore || !hasMore) return;
+        setLoadingMore(true);
+
+        const newOffset = offset + limit;
+        const { data, error } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('conversation_id', id)
+            .order('created_at', { ascending: false })
+            .range(newOffset, newOffset + limit - 1);
+
+        if (error) {
+            console.error("Error fetching older messages:", error);
+            setLoadingMore(false);
+            return;
+        }
+
+        if (data.length < limit) setHasMore(false);
+
+        if (data.length > 0) {
+            const olderMessages = data; // Keep them DESC
+            
+            // Maintain scroll position for pagination:
+            // Since we're in flex-col-reverse, appending to the end of the array 
+            // should natively stay stable in many browsers, but we'll reinforce it.
+            const container = scrollRef.current;
+            const scrollPos = container?.scrollTop || 0;
+
+            setMessages(prev => [...prev, ...olderMessages]);
+            setOffset(newOffset);
+
+            // If the browser doesn't natively anchor col-reverse, we'll manually ensure no jump
+            // We want to make sure the scroll position doesn't shift relative to the content.
+            if (container && scrollPos === 0) {
+                // If they are at the absolute bottom, stay there.
+            }
+        } else {
+            setHasMore(false);
+        }
+        setLoadingMore(false);
+    };
 
     useEffect(() => {
         let channel = null;
@@ -97,13 +164,22 @@ export default function ChatWindowPage() {
             if (!session || cancelled) return;
             setCurrentUser(session.user);
 
+            // 0. Prefill from provider if available (Instant Header)
+            const prefill = conversations.find(c => c.id === id);
+            if (prefill) {
+                setConversation(prefill);
+            }
+
+            const hasCache = !!messagesCache[id];
+            if (!hasCache && !prefill) setLoading(true);
+
             // 1. Fetch conversation details (who am I talking to?)
             const { data: convData, error: convError } = await supabase
                 .from('conversations')
                 .select(`
                     *,
                     participants:conversation_participants(
-                        user:users(id, display_name, first_name, profile_picture, username, is_verified, is_admin)
+                        user:users(id, display_name, first_name, profile_picture, username, is_verified, is_admin, bio)
                     ),
                     gig:gigs(
                         id, title, price, category,
@@ -124,37 +200,53 @@ export default function ChatWindowPage() {
                 otherUser: otherUserRaw ? { ...otherUserRaw, computedName: getDisplayName(otherUserRaw) } : { computedName: "Somebody", display_name: "Somebody" }
             });
 
-            // 2. Fetch messages
-            const { data: msgData, error: msgError } = await supabase
+                // Initialize with cache if available
+                if (messagesCache[id]) {
+                    const cached = messagesCache[id];
+                    setMessages(cached);
+                    setHasMore(cached.length >= limit);
+                    setLoading(false);
+                    isFirstLoad.current = false;
+                }
+
+                // 2. Fresh fetch of last 70 messages (background sync)
+                const { data: msgData, error: msgError } = await supabase
                 .from('messages')
                 .select('*')
                 .eq('conversation_id', id)
-                .order('created_at', { ascending: true });
+                .order('created_at', { ascending: false })
+                .limit(limit);
 
             if (!msgError && !cancelled) {
-                const formattedMessages = (msgData || []).map(m => ({
+                // messages come back DESC, flex-col-reverse handles the anchor
+                const sortedMessages = (msgData || []);
+                setHasMore(msgData?.length === limit);
+
+                const formattedMessages = sortedMessages.map(m => ({
                     ...m,
-                    reply_to: msgData.find(parent => parent.id === m.reply_to_id) ? {
-                        sender: msgData.find(parent => parent.id === m.reply_to_id).sender_id === session.user.id ? 'You' : convData.participants.find(p => p.user.id !== session.user.id)?.user.display_name || 'Somebody',
-                        text: msgData.find(parent => parent.id === m.reply_to_id).content
+                    reply_to: sortedMessages.find(parent => parent.id === m.reply_to_id) ? {
+                        sender: sortedMessages.find(parent => parent.id === m.reply_to_id).sender_id === session?.user?.id ? 'You' : (convData.participants.find(p => p.user.id !== session?.user?.id)?.user.display_name || 'Somebody'),
+                        text: sortedMessages.find(parent => parent.id === m.reply_to_id).content
                     } : null
                 }));
                 setMessages(formattedMessages);
                 updateMessagesCache(id, formattedMessages);
 
-                // Mark incoming messages as read
+                // Mark incoming messages as read (if focused)
                 if (msgData?.length > 0) {
-                    supabase.rpc('mark_messages_as_read', {
-                        p_conversation_id: id,
-                        p_user_id: session.user.id
-                    }).then(({ error }) => {
-                        if (error) console.error("Error marking messages as read:", error);
-                    });
+                    markAsRead();
+                }
+                setLoading(false);
+
+                // Initial Load Nudge: 
+                // Ensure flex-col-reverse starts at absolute end on first paint
+                if (isFirstLoad.current) {
+                    setTimeout(() => {
+                        if (scrollRef.current) scrollRef.current.scrollTop = 0;
+                        isFirstLoad.current = false;
+                    }, 100);
                 }
             }
-            setLoading(false);
-
-            if (cancelled) return;
 
             // 3. Subscribe to real-time updates
             channel = supabase
@@ -162,9 +254,19 @@ export default function ChatWindowPage() {
                 .on(
                     'postgres_changes',
                     { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${id}` },
-                    (payload) => {
+                    async (payload) => {
+                        // "Fetch new messages when alert arrives" - Fetching full row from ID
+                        // This prevents heavy realtime payloads and ensures data integrity
+                        const { data: newRow, error } = await supabase
+                           .from('messages')
+                           .select('*')
+                           .eq('id', payload.new.id)
+                           .single();
+
+                        if (error || !newRow) return;
+
                         setMessages(prev => {
-                            if (prev.find(m => m.id === payload.new.id)) return prev;
+                            if (prev.find(m => m.id === newRow.id)) return prev;
 
                             // Helper to format the incoming message with reply data
                             const formatMsg = (raw) => {
@@ -172,33 +274,30 @@ export default function ChatWindowPage() {
                                 return {
                                     ...raw,
                                     reply_to: parent ? {
-                                        sender: parent.sender_id === session.user.id ? 'You' : convData.participants.find(p => p.user.id !== session.user.id)?.user.display_name || 'Somebody',
+                                        sender: (parent.sender_id === (session?.user?.id) ? 'You' : (convData.participants.find(p => p.user.id !== session?.user?.id)?.user.display_name || 'Somebody')),
                                         text: parent.content
                                     } : null
                                 };
                             };
 
-                            const formattedNew = formatMsg(payload.new);
+                            const formattedNew = formatMsg(newRow);
 
                             const optimisticMatch = prev.find(m =>
                                 m.id.toString().startsWith('temp-') &&
-                                m.sender_id === payload.new.sender_id &&
-                                (m.content === payload.new.content || (!m.content && !payload.new.content && m.attachment_url))
+                                m.sender_id === newRow.sender_id &&
+                                (m.content === newRow.content || (!m.content && !newRow.content && m.attachment_url))
                             );
 
                             if (optimisticMatch) {
                                 return prev.map(m => m.id === optimisticMatch.id ? formattedNew : m);
                             }
 
-                            return [...prev, formattedNew];
+                            return [formattedNew, ...prev];
                         });
 
-                        // If the incoming message is not from us, mark it as read immediately
-                        if (payload.new.sender_id !== session.user.id) {
-                            supabase.rpc('mark_messages_as_read', {
-                                p_conversation_id: id,
-                                p_user_id: session.user.id
-                            });
+                        // If the incoming message is not from us, mark it as read ONLY if we are focused
+                        if (newRow.sender_id !== (session?.user?.id)) {
+                            markAsRead();
                         }
                     }
                 )
@@ -234,27 +333,27 @@ export default function ChatWindowPage() {
 
         return () => {
             cancelled = true;
+            setActiveConversation(null);
             if (channel) {
                 supabase.removeChannel(channel);
             }
         };
-    }, [id]);
+    }, [id, currentUser?.id]);
 
+    // Handle marking as read when window regains focus
     useEffect(() => {
-        if (scrollRef.current && messages.length > 0) {
-            if (isFirstLoad.current) {
-                // Instant jump on first load to prevent visible "scrolling" delay
-                scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-                isFirstLoad.current = false;
-            } else {
-                // Smooth scroll for subsequent real-time messages
-                scrollRef.current.scrollTo({
-                    top: scrollRef.current.scrollHeight,
-                    behavior: 'smooth'
-                });
-            }
-        }
-    }, [messages]);
+        const handleFocus = () => markAsRead();
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleFocus);
+        
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleFocus);
+        };
+    }, [id, currentUser?.id]);
+
+    // JS-based scroll-to-bottom removed in favor of Native Reverse Layout
+    // This eliminates the "jump to top and scroll down" effect.
 
     // Force a re-render every minute to update the "is deletable" 30-min window constraint
     const [, setTick] = useState(0);
@@ -275,9 +374,9 @@ export default function ChatWindowPage() {
     const handleAttachmentSelect = (e) => {
         const files = Array.from(e.target.files);
         if (files.length > 0) {
-            const validFiles = files.filter(file => (file.size / (1024 * 1024)) <= 15);
+            const validFiles = files.filter(file => (file.size / (1024 * 1024)) <= 20);
             if (validFiles.length !== files.length) {
-                showToast("Some files are larger than 15MB and were excluded.", "error");
+                showToast("Some files are larger than 20MB and were excluded.", "error");
             }
             if (validFiles.length > 0) {
                 setSelectedAttachments(prev => [...prev, ...validFiles]);
@@ -313,7 +412,7 @@ export default function ChatWindowPage() {
             } : null
         };
 
-        setMessages(prev => [...prev, optimisticMsg]);
+        setMessages(prev => [optimisticMsg, ...prev]);
 
         const msgAttachmentFiles = [...selectedAttachments];
         const replyToId = replyingTo?.id;
@@ -484,7 +583,7 @@ export default function ChatWindowPage() {
                             </div>
                         </div>
                         {/* Messages skeleton */}
-                        <div className="flex-1 p-6 flex flex-col gap-4">
+                        <div className="flex-1 p-6 flex flex-col-reverse gap-4">
                             <MessageSkeleton isMe={false} />
                             <MessageSkeleton isMe={true} />
                             <MessageSkeleton isMe={false} />
@@ -513,8 +612,17 @@ export default function ChatWindowPage() {
                 <div className="flex-1 flex flex-col h-full overflow-hidden shrink-0 min-w-0">
                     {/* Chat Header */}
                     <div className="sticky top-0 z-30 bg-white px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
-                        <div className="flex items-center gap-4 min-w-0">
-                            <button onClick={() => router.push('/dashboard/chat')} className="md:hidden p-2 hover:bg-gray-50 rounded-full transition-colors mr-1">
+                        <div 
+                            className="flex items-center gap-4 min-w-0 cursor-pointer hover:bg-gray-50/50 p-1 -ml-1 rounded-xl transition-colors"
+                            onClick={() => setIsInfoOpen(true)}
+                        >
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push('/dashboard/chat');
+                                }} 
+                                className="md:hidden p-2 hover:bg-gray-50 rounded-full transition-colors mr-1"
+                            >
                                 <HugeiconsIcon icon={ArrowLeft01Icon} size={20} className="text-gray-900" />
                             </button>
                             <div className="shrink-0">
@@ -549,217 +657,203 @@ export default function ChatWindowPage() {
                         </div>
                     </div>
 
-                    {/* Messages Stream */}
-                    <div
-                        ref={scrollRef}
-                        className="flex-1 overflow-y-auto p-6 pb-[180px] md:pb-6 scroll-smooth flex flex-col gap-4 bg-gray-50/20"
-                    >
-                        {/* Gig Reference Card */}
-                        {conversation?.gig && (
+                    {/* Messages Stream (Flat list for absolute stability) */}
+                    {(() => {
+                        const items = [];
+                        if (messages.length > 0) {
+                            messages.forEach((msg, idx) => {
+                                const msgDate = new Date(msg.created_at || new Date()).toDateString();
+                                
+                                // Push message item
+                                items.push({ type: 'message', data: msg, key: msg.id || `msg-${idx}` });
+
+                                const nextMsg = messages[idx + 1];
+                                const nextDate = nextMsg ? new Date(nextMsg.created_at || new Date()).toDateString() : null;
+
+                                // If next message has different date, push header
+                                if (msgDate !== nextDate) {
+                                    items.push({ type: 'date-header', label: msgDate, key: `date-${msgDate}` });
+                                }
+                            });
+
+                            if (hasMore) {
+                                items.push({ type: 'load-more', key: 'load-more-btn' });
+                            }
+                            if (conversation?.gig) {
+                                items.push({ type: 'gig-card', data: conversation.gig, key: 'gig-card-ref' });
+                            }
+                        }
+
+                        return (
                             <div
-                                onClick={() => router.push(`/dashboard/gigs/detail?id=${conversation.gig.id}`)}
-                                className="cursor-pointer mx-auto w-full max-w-sm bg-white border-2 border-[#ffc107]/30 rounded-[1.5rem] p-4 flex gap-3 items-center shadow-sm hover:border-[#ffc107] hover:shadow-md transition-all mb-2"
+                                ref={scrollRef}
+                                className="flex-1 overflow-y-auto p-6 pb-24 md:pb-6 flex flex-col-reverse gap-4 bg-gray-50/20"
+                                style={{ overflowAnchor: 'auto' }}
                             >
-                                <div className="shrink-0">
-                                    <Avatar
-                                        src={conversation.gig.author?.profile_picture}
-                                        name={getDisplayName(conversation.gig.author, '?')}
-                                        className="w-12 h-12 rounded-full border border-gray-100"
-                                    />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Gig Reference</p>
-                                    <p className="text-[14px] font-black text-gray-900 truncate">{conversation.gig.title}</p>
-                                    <p className="text-[13px] font-bold text-[#ffc107]">
-                                        <span className="text-gray-400 text-[11px] font-medium mr-0.5">¢</span>
-                                        {conversation.gig.price}
-                                    </p>
-                                </div>
-                                <HugeiconsIcon icon={InformationCircleIcon} size={18} className="text-gray-300 shrink-0" />
-                            </div>
-                        )}
+                                {items.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-center opacity-30 mt-10 order-first">
+                                        <HugeiconsIcon icon={InformationCircleIcon} className="w-12 h-12 mb-2" />
+                                        <p className="font-bold">No messages yet. Start the conversation!</p>
+                                    </div>
+                                ) : (
+                                    items.map((item) => {
+                                        if (item.type === 'message') {
+                                            const msg = item.data;
+                                            const isMe = currentUser ? msg.sender_id === currentUser.id : false;
+                                            if (!currentUser) return null;
+                                            
+                                            const isTemp = msg.id.toString().startsWith('temp-');
+                                            const msgAgeMs = new Date() - new Date(msg.created_at);
+                                            const canDelete = isMe && !isTemp && (msgAgeMs < 30 * 60 * 1000);
 
-                        {messages.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full text-center opacity-30 mt-10">
-                                <HugeiconsIcon icon={InformationCircleIcon} className="w-12 h-12 mb-2" />
-                                <p className="font-bold">No messages yet. Start the conversation!</p>
-                            </div>
-                        ) : (
-                            (() => {
-                                const grouped = messages.reduce((acc, msg) => {
-                                    const dateStr = new Date(msg.created_at || new Date()).toDateString();
-                                    if (!acc[dateStr]) acc[dateStr] = [];
-                                    acc[dateStr].push(msg);
-                                    return acc;
-                                }, {});
+                                            const urls = msg.attachment_url?.split(',') || [];
+                                            const images = urls.filter(url => url.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i) || url.startsWith('blob:') || url.match(/\.(jpeg|jpg|gif|png|webp)$/i));
+                                            const videos = urls.filter(url => url.match(/\.(mp4|webm|ogg|mov|m4v|3gp|mkv)(\?.*)?$/i));
+                                            const docs = urls.filter(url => !(
+                                                url.match(/\.(jpeg|jpg|gif|png|webp|mp4|webm|ogg|mov|m4v|3gp|mkv)(\?.*)?$/i) || 
+                                                url.startsWith('blob:') || 
+                                                url.match(/\.(jpeg|jpg|gif|png|webp)$/i)
+                                            ));
+                                            
+                                            const hasImages = images.length > 0;
+                                            const hasVideos = videos.length > 0;
+                                            const hasText = !!msg.content;
+                                            const hasDocs = docs.length > 0;
+                                            const hasReply = !!msg.reply_to;
+                                            const onlyMedia = (hasImages || hasVideos) && !hasText && !hasDocs && !hasReply;
 
-                                return Object.entries(grouped).map(([dateStr, dayMessages]) => {
-                                    const date = new Date(dateStr);
-                                    const today = new Date();
-                                    const yesterday = new Date();
-                                    yesterday.setDate(today.getDate() - 1);
-
-                                    let dateLabel = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-
-                                    const isSameDay = (d1, d2) =>
-                                        d1.getFullYear() === d2.getFullYear() &&
-                                        d1.getMonth() === d2.getMonth() &&
-                                        d1.getDate() === d2.getDate();
-
-                                    if (isSameDay(date, today)) dateLabel = "Today";
-                                    else if (isSameDay(date, yesterday)) dateLabel = "Yesterday";
-
-                                    return (
-                                        <div key={dateStr} className="w-full flex flex-col gap-4">
-                                            <div className="sticky top-0 z-20 flex justify-center py-4 pointer-events-none">
-                                                <span className="bg-white/95 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-gray-500 uppercase tracking-widest shadow-md border border-gray-100 pointer-events-auto">
-                                                    {dateLabel}
-                                                </span>
-                                            </div>
-                                            {dayMessages.map((msg, idx) => {
-                                                const isMe = msg.sender_id === currentUser?.id;
-                                                const isTemp = msg.id.toString().startsWith('temp-');
-
-                                                // Check if message is less than 30 mins old
-                                                const msgAgeMs = new Date() - new Date(msg.created_at);
-                                                const canDelete = isMe && !isTemp && (msgAgeMs < 30 * 60 * 1000);
-
-                                                return (
-                                                    <div
-                                                        key={msg.id || idx}
-                                                        className={`flex group ${isMe ? 'justify-end' : 'justify-start'}`}
-                                                    >
-                                                        <div className="flex items-center gap-2 max-w-[85%] sm:max-w-[70%]">
-                                                            {canDelete && (
-                                                                <button
-                                                                    onClick={() => handleDeleteMessage(msg.id)}
-                                                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-100 md:opacity-0 group-hover:opacity-100 shrink-0"
-                                                                    title="Delete message"
-                                                                >
-                                                                    <HugeiconsIcon icon={Delete01Icon} size={16} />
-                                                                </button>
-                                                            )}
-
-                                                            <motion.div
-                                                                drag="x"
-                                                                dragConstraints={{ left: 0, right: 80 }}
-                                                                dragElastic={0.2}
-                                                                dragSnapToOrigin={true}
-                                                                onDragEnd={(e, info) => {
-                                                                    if (info.offset.x > 50) {
-                                                                        setReplyingTo(msg);
-                                                                    }
-                                                                }}
-                                                                className={`px-5 py-3 rounded-[1.5rem] shadow-sm text-sm font-medium overflow-hidden flex flex-col gap-2 relative group/msg cursor-grab active:cursor-grabbing ${isMe
-                                                                    ? 'bg-[#ffc107] text-black rounded-tr-none'
-                                                                    : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
-                                                                    }`}
-                                                                whileTap={{ scale: 0.98 }}
+                                            return (
+                                                <div key={item.key} className={`flex group ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                                    <div className="flex items-center gap-2 max-w-[85%] sm:max-w-[70%]">
+                                                        {canDelete && (
+                                                            <button
+                                                                onClick={() => handleDeleteMessage(msg.id)}
+                                                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-100 md:opacity-0 group-hover:opacity-100 shrink-0"
+                                                                title="Delete message"
                                                             >
-                                                                {/* Swipe Indicator */}
-                                                                <div className="absolute inset-y-0 -left-10 flex items-center justify-center opacity-0 group-active/msg:opacity-100 transition-opacity">
-                                                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shadow-sm">
-                                                                        <HugeiconsIcon icon={ArrowMoveUpLeftIcon} className="w-4 h-4 text-gray-400" />
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Render Quoted Message */}
-                                                                {msg.reply_to && (
-                                                                    <div className={`mb-1 p-2 rounded-lg border-l-4 text-[12px] bg-black/5 border-black/20 text-gray-600 line-clamp-2`}>
-                                                                        <span className="font-black text-[10px] block uppercase tracking-wider mb-0.5">
-                                                                            {msg.reply_to.sender}
-                                                                        </span>
+                                                                <HugeiconsIcon icon={Delete01Icon} size={16} />
+                                                            </button>
+                                                        )}
+                                                        <motion.div
+                                                            drag="x" dragConstraints={{ left: 0, right: 80 }} dragElastic={0.2} dragSnapToOrigin={true}
+                                                            onDragEnd={(e, info) => { if (info.offset.x > 50) setReplyingTo(msg); }}
+                                                            className={`rounded-[1.5rem] shadow-sm text-sm font-medium overflow-hidden flex flex-col relative group/msg cursor-grab active:cursor-grabbing ${isMe ? 'bg-[#ffc107] text-black rounded-tr-none' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'}`}
+                                                            whileTap={{ scale: 0.98 }}
+                                                        >
+                                                            {/* Render Quoted Message */}
+                                                            {hasReply && (
+                                                                <div className="px-3 pt-3 pb-1">
+                                                                    <div className={`p-2 rounded-lg border-l-4 text-[12px] bg-black/5 border-black/20 text-gray-600 line-clamp-2`}>
+                                                                        <span className="font-black text-[10px] block uppercase tracking-wider mb-0.5">{msg.reply_to.sender}</span>
                                                                         {msg.reply_to.text}
                                                                     </div>
-                                                                )}
-
-                                                                {/* Render Attachment if exists */}
-                                                                {msg.attachment_url && (() => {
-                                                                    const urls = msg.attachment_url.split(',');
-                                                                    const images = urls.filter(url => url.match(/\\.(jpeg|jpg|gif|png|webp)(\\?.*)?$/i) || url.startsWith('blob:') || url.match(/\\.(jpeg|jpg|gif|png|webp)$/i));
-                                                                    const docs = urls.filter(url => !(url.match(/\\.(jpeg|jpg|gif|png|webp)(\\?.*)?$/i) || url.startsWith('blob:') || url.match(/\\.(jpeg|jpg|gif|png|webp)$/i)));
-                                                                    return (
-                                                                        <div className="max-w-[280px] md:max-w-sm rounded-xl flex flex-col gap-1">
-                                                                            {images.length > 0 && (
-                                                                                <div className={`grid gap-1 ${images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} rounded-xl overflow-hidden`}>
-                                                                                    {images.map((url, i) => (
-                                                                                        <div key={i} className={`overflow-hidden ${images.length === 3 && i === 0 ? 'col-span-2 aspect-[2/1]' : images.length === 1 ? 'aspect-auto' : 'aspect-square'}`}>
-                                                                                            <img
-                                                                                                src={url}
-                                                                                                alt="Attachment"
-                                                                                                className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition-opacity"
-                                                                                                onClick={() => showImage(url, "Attachment")}
-                                                                                            />
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            )}
-                                                                            {docs.length > 0 && docs.map((url, i) => (
-                                                                                <div
-                                                                                    key={i}
-                                                                                    onClick={() => downloadFile(url, `attachment-${msg.id}-${i}`)}
-                                                                                    className={`flex items-center justify-between gap-3 p-3 rounded-xl border cursor-pointer hover:opacity-90 transition-opacity mt-1 ${isMe ? 'bg-black/5 border-black/10 text-black' : 'bg-gray-50 border-gray-100 text-gray-800'}`}
-                                                                                >
-                                                                                    <div className="flex items-center gap-3 overflow-hidden">
-                                                                                        <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${isMe ? 'bg-white/40' : 'bg-white shadow-sm'}`}>
-                                                                                            <HugeiconsIcon icon={Attachment01Icon} className="w-5 h-5 opacity-70" />
-                                                                                        </div>
-                                                                                        <div className="flex flex-col overflow-hidden">
-                                                                                            <span className="text-sm font-bold truncate max-w-[150px]">
-                                                                                                {(() => {
-                                                                                                    try {
-                                                                                                        const urlObj = new URL(url);
-                                                                                                        const pathParts = urlObj.pathname.split('/');
-                                                                                                        const lastPart = pathParts[pathParts.length - 1];
-                                                                                                        const cleanName = decodeURIComponent(lastPart).replace(/^[^-]+-\\d+\\./, '');
-                                                                                                        return cleanName || 'Document';
-                                                                                                    } catch (e) {
-                                                                                                        return 'Document';
-                                                                                                    }
-                                                                                                })()}
-                                                                                            </span>
-                                                                                            <span className="text-[10px] opacity-60 uppercase">{url.split('.').pop()?.split('?')[0] || 'FILE'}</span>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    <div className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center border ${isMe ? 'border-black/10 text-black' : 'border-gray-200 text-gray-500'}`}>
-                                                                                        <HugeiconsIcon icon={Download01Icon} className="w-4 h-4" />
-                                                                                    </div>
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    );
-                                                                })()}
-
-                                                                {msg.content && (
-                                                                    <Linkify 
-                                                                        text={msg.content} 
-                                                                        className={`whitespace-pre-wrap ${isMe ? 'text-black [&_a]:text-black [&_a]:underline' : ''}`} 
-                                                                    />
-                                                                )}
-                                                                <div className={`text-[10px] mt-1 opacity-50 flex items-center justify-end ${isMe ? 'text-black' : 'text-gray-500'}`}>
-                                                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                                    {isMe && (
-                                                                        <HugeiconsIcon
-                                                                            icon={msg.is_read ? TickDouble02Icon : Tick02Icon}
-                                                                            size={12}
-                                                                            className={`ml-1 ${msg.is_read ? 'text-blue-600' : 'text-gray-600'}`}
-                                                                        />
-                                                                    )}
                                                                 </div>
-                                                            </motion.div>
-                                                        </div>
+                                                            )}
+
+                                                            {/* Render Images */}
+                                                            {hasImages && (
+                                                                <div className={`grid gap-0.5 ${images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} ${onlyMedia ? '' : 'px-1 pt-1'}`}>
+                                                                    {images.map((url, i) => (
+                                                                        <div key={i} className={`overflow-hidden ${images.length === 3 && i === 0 ? 'col-span-2 aspect-[1.8/1]' : images.length === 1 ? 'max-h-[400px]' : 'aspect-square'}`}>
+                                                                            <img src={url} alt="Attachment" className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition-opacity" onClick={() => showImage(url, "Attachment")} />
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
+                                                            {/* Render Videos */}
+                                                            {hasVideos && (
+                                                                <div className={`grid gap-0.5 ${videos.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} ${onlyMedia ? '' : 'px-1 pt-1'}`}>
+                                                                    {videos.map((url, i) => (
+                                                                        <div key={i} className={`overflow-hidden rounded-xl ${videos.length === 1 ? 'max-h-[400px] aspect-[4/5]' : 'aspect-square'}`}>
+                                                                            <AutoPauseVideo src={url} className="w-full h-full object-cover" containerRef={scrollRef} />
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
+                                                            {/* Render Documents */}
+                                                            {hasDocs && (
+                                                                <div className="px-3 pt-2 flex flex-col gap-1">
+                                                                    {docs.map((url, i) => (
+                                                                        <div key={i} onClick={() => downloadFile(url, `attachment-${msg.id}-${i}`)} className={`flex items-center justify-between gap-3 p-3 rounded-xl border cursor-pointer hover:opacity-90 transition-opacity ${isMe ? 'bg-black/5 border-black/10 text-black' : 'bg-gray-50 border-gray-100 text-gray-800'}`}>
+                                                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                                                <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${isMe ? 'bg-white/40' : 'bg-white shadow-sm'}`}><HugeiconsIcon icon={Attachment01Icon} className="w-5 h-5 opacity-70" /></div>
+                                                                                <div className="flex flex-col overflow-hidden">
+                                                                                    <span className="text-sm font-bold truncate max-w-[150px]">{(() => { try { const urlObj = new URL(url); const pathParts = urlObj.pathname.split('/'); return decodeURIComponent(pathParts[pathParts.length - 1]).replace(/^[^-]+-\d+\./, '') || 'Document'; } catch (e) { return 'Document'; } })()}</span>
+                                                                                    <span className="text-[10px] opacity-60 uppercase">{url.split('.').pop()?.split('?')[0] || 'FILE'}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center border ${isMe ? 'border-black/10 text-black' : 'border-gray-200 text-gray-500'}`}><HugeiconsIcon icon={Download01Icon} className="w-4 h-4" /></div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
+                                                            {/* Render Text Content */}
+                                                            {msg.content && (
+                                                                <div className="px-5 py-3 pt-2">
+                                                                    <Linkify text={msg.content} className={`whitespace-pre-wrap ${isMe ? 'text-black [&_a]:text-black [&_a]:underline' : ''}`} />
+                                                                </div>
+                                                            )}
+
+                                                            {/* Status & Time */}
+                                                            <div className={`px-4 pb-2 text-[10px] opacity-50 flex items-center justify-end ${isMe ? 'text-black' : 'text-gray-500'} ${!msg.content && !msg.attachment_url?.match(/\.(pdf|doc|docx|xls|xlsx|zip)/i) ? 'absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-black/20 text-white backdrop-blur-sm z-30' : ''}`}>
+                                                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                {isMe && <HugeiconsIcon icon={msg.is_read ? TickDouble02Icon : Tick02Icon} size={12} className={`ml-1 ${msg.is_read ? 'text-blue-600' : 'text-gray-600'}`} />}
+                                                            </div>
+                                                        </motion.div>
                                                     </div>
-                                                );
-                                            })}
-                                        </div>
-                                    );
-                                });
-                            })()
-                        )}
-                    </div>
+                                                </div>
+                                            );
+                                        }
+
+                                        if (item.type === 'date-header') {
+                                            const date = new Date(item.label);
+                                            const today = new Date();
+                                            const yesterday = new Date();
+                                            yesterday.setDate(today.getDate() - 1);
+                                            let dateLabel = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                                            const isSameDay = (d1, d2) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+                                            if (isSameDay(date, today)) dateLabel = "Today";
+                                            else if (isSameDay(date, yesterday)) dateLabel = "Yesterday";
+
+                                            return (
+                                                <div key={item.key} className="flex justify-center py-4 pointer-events-none">
+                                                    <span className="bg-white/95 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-gray-500 uppercase tracking-widest shadow-md border border-gray-100 pointer-events-auto">{dateLabel}</span>
+                                                </div>
+                                            );
+                                        }
+
+                                        if (item.type === 'load-more') {
+                                            return (
+                                                <div key={item.key} className="flex justify-center py-4 order-last">
+                                                    <button onClick={fetchMoreMessages} disabled={loadingMore} className="px-4 py-2 rounded-full bg-white border border-gray-100 text-[12px] font-bold text-gray-500 hover:text-black hover:border-gray-200 transition-all shadow-sm active:scale-95 disabled:opacity-50">
+                                                        {loadingMore ? 'Loading older history...' : 'Load previous messages'}
+                                                    </button>
+                                                </div>
+                                            );
+                                        }
+
+                                        if (item.type === 'gig-card') {
+                                            const gig = item.data;
+                                            return (
+                                                <div key={item.key} onClick={() => router.push(`/dashboard/gigs/detail?id=${gig.id}`)} className="cursor-pointer mx-auto w-full max-w-sm bg-white border-2 border-[#ffc107]/30 rounded-[1.5rem] p-4 flex gap-3 items-center shadow-sm hover:border-[#ffc107] hover:shadow-md transition-all mb-4 order-last">
+                                                    <div className="shrink-0"><Avatar src={gig.author?.profile_picture} name={getDisplayName(gig.author, '?')} className="w-12 h-12 rounded-full border border-gray-100" /></div>
+                                                    <div className="flex-1 min-w-0"><p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Gig Reference</p><p className="text-[14px] font-black text-gray-900 truncate">{gig.title}</p><p className="text-[13px] font-bold text-[#ffc107]"><span className="text-gray-400 text-[11px] font-medium mr-0.5">¢</span>{gig.price}</p></div>
+                                                    <HugeiconsIcon icon={InformationCircleIcon} size={18} className="text-gray-300 shrink-0" />
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })
+                                )}
+                            </div>
+                        );
+                    })()}
 
                     {/* Input Area */}
-                    <div className="fixed md:relative bottom-[64px] md:bottom-auto left-0 right-0 md:left-auto md:right-auto p-4 md:p-6 md:pt-0 shrink-0 bg-white/90 md:bg-transparent backdrop-blur-sm md:backdrop-blur-none border-t border-gray-100 md:border-none z-30">
+                    <div className="fixed md:relative bottom-0 md:bottom-auto left-0 right-0 md:left-auto md:right-auto p-4 pb-safe md:p-6 md:pt-0 shrink-0 bg-white/95 md:bg-transparent backdrop-blur-md md:backdrop-blur-none border-t border-gray-100 md:border-none z-30">
                         {/* Reply Preview */}
                         <AnimatePresence>
                             {replyingTo && (
@@ -792,6 +886,8 @@ export default function ChatWindowPage() {
                                     <div key={idx} className="relative inline-block border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm p-1 pr-8">
                                         {selectedAttachments[idx]?.type.startsWith('image/') ? (
                                             <img src={preview} alt="Preview" className="h-16 w-auto rounded-lg object-cover" />
+                                        ) : selectedAttachments[idx]?.type.startsWith('video/') ? (
+                                            <video src={preview} className="h-16 w-auto rounded-lg object-cover" />
                                         ) : (
                                             <div className="flex items-center gap-3 px-3 py-2">
                                                 <HugeiconsIcon icon={Attachment01Icon} className="w-5 h-5 text-gray-500" />
@@ -841,7 +937,7 @@ export default function ChatWindowPage() {
                                     ref={fileInputRef}
                                     onChange={handleAttachmentSelect}
                                     className="hidden"
-                                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip"
+                                    accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.zip"
                                 />
                                 <button
                                     type="button"
@@ -853,10 +949,10 @@ export default function ChatWindowPage() {
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        fileInputRef.current.accept = "image/*";
+                                        fileInputRef.current.accept = "image/*,video/*";
                                         fileInputRef.current.click();
                                         setTimeout(() => {
-                                            if (fileInputRef.current) fileInputRef.current.accept = "image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip";
+                                            if (fileInputRef.current) fileInputRef.current.accept = "image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.zip";
                                         }, 1000);
                                     }}
                                     className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 transition-colors"
@@ -876,7 +972,12 @@ export default function ChatWindowPage() {
                 </div>
 
             </div>
+            <ChatInfoDrawer 
+                isOpen={isInfoOpen}
+                onClose={() => setIsInfoOpen(false)}
+                conversation={conversation}
+                profile={currentUser}
+            />
         </div>
-
     );
 }

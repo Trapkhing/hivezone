@@ -546,7 +546,7 @@ export default function FeedDetailPage() {
     const rootComments = comments.filter(c => !c.parent_id);
 
     return (
-        <div className="min-h-screen bg-[#fcf6de] pb-32 sm:pb-40 selection:bg-[#ffc107]/30">
+        <div className="min-h-screen bg-[#fcf6de] pb-52 sm:pb-64 selection:bg-[#ffc107]/30">
             <style>{heartPop}</style>
             <div className="max-w-[700px] mx-auto w-full p-3 sm:p-8 pt-0">
                 {/* Header */}
@@ -707,7 +707,7 @@ export default function FeedDetailPage() {
                 </div>
 
                 {/* Comments List */}
-                <div className="mt-2 divide-y divide-gray-100">
+                <div className="mt-2 divide-y divide-gray-100 pb-40">
                     {rootComments.length > 0 ? (
                         rootComments.map(comment => (
                             <Comment 

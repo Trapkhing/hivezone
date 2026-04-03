@@ -74,9 +74,12 @@ const BottomNav = () => {
         }
     };
 
-    // Hide BottomNav on feed detail pages to allow fixed reply bar
+    // Hide BottomNav on feed detail pages and study circle detail pages to allow fixed reply bar
     const isFeedDetail = pathname.startsWith("/dashboard/feed/") && pathname !== "/dashboard/feed";
-    if (isFeedDetail) return null;
+    const isCircleDetail = pathname.startsWith("/dashboard/study-circles/") && pathname !== "/dashboard/study-circles" && !pathname.endsWith("/create");
+    const isChatDetail = pathname.startsWith("/dashboard/chat/") && pathname !== "/dashboard/chat" && !pathname.endsWith("/new");
+    
+    if (isFeedDetail || isCircleDetail || isChatDetail) return null;
 
     return (
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#fcf6de] border-t border-gray-300 z-[60] px-4 py-2 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.02)] pt-1">

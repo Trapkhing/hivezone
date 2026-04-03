@@ -40,8 +40,8 @@ export default function ChatProvider({ children }) {
         setMessagesCache(prev => {
             const newCache = { ...prev };
             
-            // Limit to last 30 messages
-            const limitedMessages = messages.slice(-30);
+            // Limit to last 70 messages (matching the fetch limit)
+            const limitedMessages = messages.slice(0, 70);
             newCache[id] = limitedMessages;
 
             // Limit cache to 5 conversations total
@@ -161,9 +161,9 @@ export default function ChatProvider({ children }) {
 
         init();
 
-        // Subscribe to messages changes globally
+        // 1. Subscribe to basic unread "alerts" globally (Inbox pattern)
         const channel = supabase
-            .channel('global-chat')
+            .channel('global-inbox')
             .on(
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'messages' },
@@ -171,84 +171,45 @@ export default function ChatProvider({ children }) {
                     const newMsg = payload.new;
                     const isActiveChat = newMsg.conversation_id === activeConversationRef.current;
 
-                    // Only fetch global unread count if message is NOT for the active chat
-                    // (the chat window's mark_messages_as_read handles DB for active chats)
+                    // Only update global counts if it's NOT the active chat (page-level handles active)
                     if (!isActiveChat) {
-                        fetchUnreadCount();
-                    }
-
-                    // Update messages cache if it exists for this conversation
-                    setMessagesCache(prev => {
-                        if (!prev[newMsg.conversation_id]) return prev;
-                        const existing = prev[newMsg.conversation_id];
-                        if (existing.find(m => m.id === newMsg.id)) return prev;
+                        fetchUnreadCount(currentSession);
                         
-                        const updated = [...existing, newMsg].slice(-30);
-                        return { ...prev, [newMsg.conversation_id]: updated };
-                    });
-
-                    // Instantly update conversations list (sort & last_message)
-                    setConversations(prev => {
-                        const convIndex = prev.findIndex(c => c.id === newMsg.conversation_id);
-
-                        if (convIndex > -1) {
-                            const updatedConvs = [...prev];
-                            const conv = updatedConvs[convIndex];
-
-                            const isIncoming = newMsg.sender_id !== currentSession?.user?.id;
-
-                            const updatedConv = {
-                                ...conv,
-                                last_message: newMsg.content,
-                                updated_at: newMsg.created_at,
-                                unreadCount: isActiveChat ? 0 : (isIncoming ? conv.unreadCount + 1 : conv.unreadCount)
-                            };
-
-                            updatedConvs.splice(convIndex, 1);
-                            updatedConvs.unshift(updatedConv);
-                            return updatedConvs;
-                        } else {
-                            fetchConversations(currentSession);
-                            return prev;
+                        // We also trigger a lazy conversation list refresh so the "latest message" matches
+                        // but only if the user is sent this message
+                        if (newMsg.sender_id !== currentSession?.user?.id) {
+                             fetchConversations(currentSession);
                         }
-                    });
+                    } else {
+                        // For active chat, sidebar unread is handled by markAsRead on the page
+                    }
                 }
             )
             .on(
                 'postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'messages' },
                 () => {
-                    // When is_read flips (mark_messages_as_read RPC), refresh unread badges
-                    fetchUnreadCount();
-                }
-            )
-            .on(
-                'postgres_changes',
-                { event: 'DELETE', schema: 'public', table: 'messages' },
-                () => {
-                    // Update exact counts and fetch the new last_message from server
-                    fetchUnreadCount();
+                    // Update unread badges when is_read status changes
+                    fetchUnreadCount(currentSession);
                     fetchConversations(currentSession);
                 }
             )
-            .on(
-                'postgres_changes',
-                { event: 'UPDATE', schema: 'public', table: 'conversations' },
-                () => {
-                    fetchConversations(currentSession);
-                }
-            )
-            .subscribe((status) => {
-                if (status === 'CHANNEL_ERROR') {
-                    // Silently auto-retry on background connection instability
-                    setTimeout(() => {
-                        channel.subscribe();
-                    }, 2000);
-                }
-            });
+            .subscribe();
+
+        // 2. Lazy sync on focus (catches missed messages during sleep/background)
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && currentSession) {
+                fetchUnreadCount(currentSession);
+                fetchConversations(currentSession);
+            }
+        };
+        window.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', handleVisibilityChange);
 
         return () => {
             supabase.removeChannel(channel);
+            window.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleVisibilityChange);
         };
     }, []);
 
