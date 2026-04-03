@@ -8,7 +8,9 @@ const ChatContext = createContext({
     unreadCount: 0,
     conversations: [],
     loadingConversations: true,
+    messagesCache: {},
     setActiveConversation: () => { },
+    updateMessagesCache: () => { },
     hideConversation: async () => { },
     refreshUnreadCount: () => { },
     refreshConversations: () => { }
@@ -20,6 +22,7 @@ export default function ChatProvider({ children }) {
     const [unreadCount, setUnreadCount] = useState(0);
     const [conversations, setConversations] = useState([]);
     const [loadingConversations, setLoadingConversations] = useState(true);
+    const [messagesCache, setMessagesCache] = useState({});
     const activeConversationRef = useRef(null);
     const supabase = createClient();
 
@@ -31,6 +34,26 @@ export default function ChatProvider({ children }) {
                 c.id === id ? { ...c, unreadCount: 0 } : c
             ));
         }
+    }, []);
+
+    const updateMessagesCache = useCallback((id, messages) => {
+        setMessagesCache(prev => {
+            const newCache = { ...prev };
+            
+            // Limit to last 30 messages
+            const limitedMessages = messages.slice(-30);
+            newCache[id] = limitedMessages;
+
+            // Limit cache to 5 conversations total
+            const keys = Object.keys(newCache);
+            if (keys.length > 5) {
+                // Remove the oldest conversation that isn't the active one
+                const oldestKey = keys.find(k => k !== id && k !== activeConversationRef.current) || keys[0];
+                delete newCache[oldestKey];
+            }
+
+            return newCache;
+        });
     }, []);
 
     const fetchConversations = async (sessionParam = null) => {
@@ -154,6 +177,16 @@ export default function ChatProvider({ children }) {
                         fetchUnreadCount();
                     }
 
+                    // Update messages cache if it exists for this conversation
+                    setMessagesCache(prev => {
+                        if (!prev[newMsg.conversation_id]) return prev;
+                        const existing = prev[newMsg.conversation_id];
+                        if (existing.find(m => m.id === newMsg.id)) return prev;
+                        
+                        const updated = [...existing, newMsg].slice(-30);
+                        return { ...prev, [newMsg.conversation_id]: updated };
+                    });
+
                     // Instantly update conversations list (sort & last_message)
                     setConversations(prev => {
                         const convIndex = prev.findIndex(c => c.id === newMsg.conversation_id);
@@ -224,7 +257,9 @@ export default function ChatProvider({ children }) {
             unreadCount,
             conversations,
             loadingConversations,
+            messagesCache,
             setActiveConversation,
+            updateMessagesCache,
             hideConversation,
             refreshUnreadCount: fetchUnreadCount,
             refreshConversations: fetchConversations

@@ -261,7 +261,7 @@ export default function StudyCircleSidebar({ activeId, isMobileVisible = true })
             </div>
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
+            <div className="flex-1 overflow-y-auto custom-scrollbar pb-24 md:pb-0">
                 {loading ? (
                     <div className="flex flex-col gap-1 p-4">
                         {[1, 2, 3].map(i => (

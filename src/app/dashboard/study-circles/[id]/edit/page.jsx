@@ -91,13 +91,11 @@ export default function EditCirclePage({ params }) {
         setIsSaving(true);
         let updatedAvatarUrl = formData.avatar_url;
 
-        // Handle File Upload
         if (selectedAvatarFile) {
             try {
                 const fileExt = selectedAvatarFile.name.split('.').pop();
                 const fileName = `study-circle-avatars/${Math.random().toString(36).substring(2, 9)}-${Date.now()}.${fileExt}`;
 
-                // 1. Get presigned URL from our API
                 const response = await fetch("/api/upload", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -110,7 +108,6 @@ export default function EditCirclePage({ params }) {
                 if (!response.ok) throw new Error("Failed to get upload URL");
                 const { uploadUrl, publicUrl: r2PublicUrl } = await response.json();
 
-                // 2. Upload directly to Cloudflare R2
                 const uploadResponse = await fetch(uploadUrl, {
                     method: "PUT",
                     headers: { "Content-Type": selectedAvatarFile.type },
@@ -118,11 +115,10 @@ export default function EditCirclePage({ params }) {
                 });
 
                 if (!uploadResponse.ok) throw new Error("Failed to upload");
-
                 updatedAvatarUrl = r2PublicUrl;
             } catch (error) {
                 console.error("Circle avatar upload error:", error);
-                showToast("Image upload failed. Other changes will be saved.", "error");
+                showToast("Image upload failed.", "error");
             }
         }
 
@@ -138,32 +134,28 @@ export default function EditCirclePage({ params }) {
             .eq("id", id);
 
         if (!error) {
-            showToast("Changes saved successfully!", "success");
+            showToast("Changes saved!", "success");
             router.push("/dashboard/study-circles");
         } else {
-            showToast("Failed to save changes", "error");
+            showToast("Failed to save", "error");
         }
         setIsSaving(false);
     };
 
     const handleDelete = () => {
         confirmAction({
-            title: "Delete Study Circle",
-            message: "This will permanently remove the circle and all its messages. This action cannot be undone.",
-            confirmText: "Delete Forever",
-            cancelText: "Keep Circle",
+            title: "Delete Circle?",
+            message: "This permanently removes everything. This cannot be undone.",
+            confirmText: "Yes, delete",
+            cancelText: "Keep it",
             type: "danger",
             onConfirm: async () => {
-                const { error } = await supabase
-                    .from("study_circles")
-                    .delete()
-                    .eq("id", id);
-
+                const { error } = await supabase.from("study_circles").delete().eq("id", id);
                 if (!error) {
-                    showToast("Study Circle deleted", "success");
+                    showToast("Circle deleted", "success");
                     router.push("/dashboard/study-circles");
                 } else {
-                    showToast("Failed to delete circle", "error");
+                    showToast("Failed to delete", "error");
                 }
             }
         });
@@ -171,171 +163,172 @@ export default function EditCirclePage({ params }) {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-white md:bg-[#fcf6de] flex items-center justify-center p-8">
+            <div className="min-h-screen bg-[#fcf6de] flex items-center justify-center">
                 <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-white md:bg-[#fcf6de] md:p-8 pb-32 md:pb-8">
-            <div className="max-w-2xl mx-auto">
-                {/* Back Link */}
-                <Link
-                    href="/dashboard/study-circles"
-                    className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 font-bold mb-8 group transition-colors"
-                >
-                    <div className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center group-hover:bg-gray-50 transition-colors shadow-sm">
-                        <HugeiconsIcon icon={ArrowLeft01Icon} className="w-5 h-5" />
-                    </div>
-                    Back to Circles
-                </Link>
-
-                <div className="bg-white md:rounded-[3rem] md:shadow-xl md:border border-gray-100 overflow-hidden">
-                    <div className="p-8 md:p-12">
-                        <div className="flex items-center justify-between mb-10 flex-wrap gap-4">
-                            <div>
-                                <h1 className="text-4xl font-black font-newyork text-gray-900 mb-2">Circle Settings</h1>
-                                <p className="text-gray-500 font-medium tracking-tight">Manage your circle's identity and privacy.</p>
-                            </div>
-                            <button
-                                onClick={handleDelete}
-                                className="px-6 py-2.5 bg-red-50 text-red-600 rounded-full text-xs font-black hover:bg-red-100 transition-colors flex items-center gap-2"
-                            >
-                                <HugeiconsIcon icon={Delete02Icon} className="w-4 h-4" />
-                                Delete Circle
-                            </button>
+        <div className="min-h-screen bg-[#fcf6de] md:p-6 lg:p-10 pb-48 md:pb-12">
+            <div className="max-w-3xl mx-auto">
+                {/* Header Navigation */}
+                <div className="flex items-center justify-between px-6 pt-2 pb-6 md:px-0">
+                    <Link
+                        href="/dashboard/study-circles"
+                        className="group flex items-center gap-3 active:scale-95 transition-transform"
+                    >
+                        <div className="w-11 h-11 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-gray-100 group-hover:bg-gray-50 transition-colors">
+                            <HugeiconsIcon icon={ArrowLeft01Icon} className="w-5 h-5 text-gray-900" />
                         </div>
+                        <span className="font-bold text-gray-500 group-hover:text-gray-900 transition-colors hidden sm:block">Back to Circles</span>
+                    </Link>
 
-                        <form onSubmit={handleUpdate} className="space-y-8">
-                            {/* Avatar Section */}
-                            <div className="flex flex-col md:flex-row items-center gap-8 bg-gray-50 p-6 rounded-[2.5rem] border border-gray-100">
-                                <div className="w-32 h-32 rounded-[2.5rem] border-4 border-white bg-white shrink-0 shadow-lg overflow-hidden flex items-center justify-center relative group cursor-pointer"
-                                    onClick={() => fileInputRef.current?.click()}
-                                >
+                    <button
+                        onClick={handleDelete}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-red-50 text-red-600 rounded-2xl font-black text-xs hover:bg-red-100 active:scale-95 transition-all shadow-sm"
+                    >
+                        <HugeiconsIcon icon={Delete02Icon} className="w-4 h-4" />
+                        Delete Circle
+                    </button>
+                </div>
+
+                <div className="bg-white md:rounded-[3rem] shadow-xl shadow-black/5 border border-gray-50/50 overflow-hidden">
+                    {/* Visual Banner Identity */}
+                    <div className="h-24 bg-gradient-to-r from-[#ffc107] to-[#ffb300] w-full" />
+
+                    <div className="px-6 py-8 md:px-12 md:pb-16 relative">
+                        {/* Avatar Positioning */}
+                        <div className="absolute -top-12 left-6 md:left-12">
+                            <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                                <div className="w-28 h-28 md:w-36 md:h-36 rounded-[2.5rem] bg-white p-1.5 shadow-lg border-4 border-white overflow-hidden relative">
                                     {(avatarPreview || formData.avatar_url) ? (
-                                        <img src={avatarPreview || formData.avatar_url} className="w-full h-full object-cover" alt="Preview" />
+                                        <img src={avatarPreview || formData.avatar_url} className="w-full h-full object-cover rounded-[2rem]" alt="Profile" />
                                     ) : (
-                                        <div className="flex flex-col items-center gap-1">
-                                            <HugeiconsIcon icon={Image01Icon} className="w-8 h-8 text-gray-300" />
+                                        <div className="w-full h-full bg-gray-100 rounded-[2rem] flex items-center justify-center">
+                                            <HugeiconsIcon icon={UserGroupIcon} className="w-10 h-10 text-gray-300" />
                                         </div>
                                     )}
-                                    <div className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[11px] font-black tracking-widest uppercase">
-                                        Update
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-[2rem]">
+                                        <HugeiconsIcon icon={Image01Icon} className="w-8 h-8 text-white" />
                                     </div>
                                 </div>
-                                <div className="flex-1 space-y-3 text-center md:text-left">
-                                    <h3 className="text-lg font-black text-gray-900">Circle Profile Picture</h3>
-                                    <p className="text-xs text-gray-500 font-medium leading-relaxed">
-                                        Change how your circle looks in the directory. Best at 1:1 ratio.
-                                    </p>
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={(e) => {
-                                            const file = e.target.files?.[0];
-                                            if (file) {
-                                                setSelectedAvatarFile(file);
-                                                setAvatarPreview(URL.createObjectURL(file));
-                                            }
-                                        }}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="inline-flex items-center gap-2 bg-white px-6 py-2.5 rounded-full border border-gray-200 text-xs font-black shadow-sm hover:bg-gray-50 active:scale-95 transition-all"
-                                    >
-                                        <HugeiconsIcon icon={Attachment01Icon} className="w-4 h-4 text-[#ffc107]" />
-                                        {selectedAvatarFile ? selectedAvatarFile.name : "Upload New Image"}
-                                    </button>
+                                <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-black text-white rounded-2xl flex items-center justify-center border-4 border-white shadow-md">
+                                    <HugeiconsIcon icon={Attachment01Icon} className="w-4 h-4 text-[#ffc107]" />
                                 </div>
                             </div>
+                            <input type="file" ref={fileInputRef} accept="image/*" className="hidden" 
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        setSelectedAvatarFile(file);
+                                        setAvatarPreview(URL.createObjectURL(file));
+                                    }
+                                }}
+                            />
+                        </div>
 
-                            {/* Core Info */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Circle Name</label>
+                        {/* Heading Area */}
+                        <div className="mt-16 md:mt-24 mb-12">
+                            <h1 className="text-4xl font-black font-newyork text-gray-900 tracking-tight mb-2">Circle Settings</h1>
+                            <p className="text-gray-500 font-medium text-lg leading-tight">Refine your community's presence and rules.</p>
+                        </div>
+
+                        <form onSubmit={handleUpdate} className="space-y-10">
+                            {/* Form Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-3">
+                                    <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Circle Name</label>
                                     <input
                                         type="text"
                                         required
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        className="w-full h-14 px-6 bg-gray-50 border border-gray-100 rounded-2xl font-bold focus:bg-white focus:border-[#ffc107] outline-none transition-all"
+                                        className="w-full h-16 px-6 bg-gray-50/50 border border-transparent rounded-[1.5rem] font-bold text-gray-900 focus:bg-white focus:border-[#ffc107] focus:ring-4 focus:ring-[#ffc107]/10 outline-none transition-all placeholder:text-gray-300"
+                                        placeholder="e.g. Physics Pioneers"
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Subject / Course</label>
+                                <div className="space-y-3">
+                                    <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Key Subject</label>
                                     <input
                                         type="text"
                                         value={formData.course}
                                         onChange={(e) => setFormData({ ...formData, course: e.target.value })}
-                                        className="w-full h-14 px-6 bg-gray-50 border border-gray-100 rounded-2xl font-bold focus:bg-white focus:border-[#ffc107] outline-none transition-all"
+                                        className="w-full h-16 px-6 bg-gray-50/50 border border-transparent rounded-[1.5rem] font-bold text-gray-900 focus:bg-white focus:border-[#ffc107] focus:ring-4 focus:ring-[#ffc107]/10 outline-none transition-all placeholder:text-gray-300"
+                                        placeholder="e.g. Science"
                                     />
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Privacy Level</label>
-                                <div className="flex gap-4">
+                            <div className="space-y-4">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Privacy & Accessibility</label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <button
                                         type="button"
                                         onClick={() => setFormData({ ...formData, is_private: false })}
-                                        className={`flex-1 flex items-center gap-4 p-5 rounded-2xl border-2 transition-all ${!formData.is_private ? 'border-blue-500 bg-blue-50 shadow-inner' : 'border-gray-50 bg-gray-50 hover:border-gray-100'}`}
+                                        className={`flex items-center gap-4 p-5 rounded-[2rem] border-2 transition-all relative overflow-hidden group ${!formData.is_private ? 'border-[#ffc107] bg-amber-50/30' : 'border-gray-50 bg-gray-50/50 hover:border-gray-200'}`}
                                     >
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${!formData.is_private ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${!formData.is_private ? 'bg-[#ffc107] text-white shadow-lg shadow-amber-200' : 'bg-white text-gray-400 shadow-sm'}`}>
                                             <HugeiconsIcon icon={UserGroupIcon} className="w-5 h-5" />
                                         </div>
                                         <div className="flex flex-col text-left">
-                                            <span className={`text-[13px] font-black ${!formData.is_private ? 'text-blue-700' : 'text-gray-500'}`}>Public</span>
-                                            <span className="text-[10px] text-gray-400 font-bold">Visible to everyone</span>
+                                            <span className={`text-[15px] font-black tracking-tight ${!formData.is_private ? 'text-amber-900' : 'text-gray-900'}`}>Public Hub</span>
+                                            <span className="text-xs text-gray-500 font-bold">Anyone can find and join</span>
                                         </div>
+                                        {!formData.is_private && <HugeiconsIcon icon={Tick01Icon} className="absolute right-6 w-5 h-5 text-amber-500" />}
                                     </button>
+
                                     <button
                                         type="button"
                                         onClick={() => setFormData({ ...formData, is_private: true })}
-                                        className={`flex-1 flex items-center gap-4 p-5 rounded-2xl border-2 transition-all ${formData.is_private ? 'border-[#ffc107] bg-[#fff9e6] shadow-inner' : 'border-gray-50 bg-gray-50 hover:border-gray-100'}`}
+                                        className={`flex items-center gap-4 p-5 rounded-[2rem] border-2 transition-all relative overflow-hidden group ${formData.is_private ? 'border-zinc-900 bg-zinc-50' : 'border-gray-50 bg-gray-50/50 hover:border-gray-200'}`}
                                     >
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${formData.is_private ? 'bg-[#ffc107] text-black' : 'bg-gray-200 text-gray-400'}`}>
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${formData.is_private ? 'bg-zinc-900 text-white shadow-lg' : 'bg-white text-gray-400 shadow-sm'}`}>
                                             <HugeiconsIcon icon={LockIcon} className="w-5 h-5" />
                                         </div>
                                         <div className="flex flex-col text-left">
-                                            <span className={`text-[13px] font-black ${formData.is_private ? 'text-[#8a6800]' : 'text-gray-500'}`}>Private</span>
-                                            <span className="text-[10px] text-gray-400 font-bold">Invite only</span>
+                                            <span className={`text-[15px] font-black tracking-tight ${formData.is_private ? 'text-zinc-900' : 'text-gray-900'}`}>Private Space</span>
+                                            <span className="text-xs text-gray-500 font-bold">Registration via invite code</span>
                                         </div>
+                                        {formData.is_private && <HugeiconsIcon icon={Tick01Icon} className="absolute right-6 w-5 h-5 text-zinc-900" />}
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Circle Description</label>
+                            <div className="space-y-3">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-1">About our Circle</label>
                                 <textarea
                                     required
-                                    rows={4}
+                                    rows={5}
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full p-6 bg-gray-50 border border-gray-100 rounded-[2rem] font-medium text-[15px] focus:bg-white focus:border-[#ffc107] outline-none transition-all resize-none shadow-inner leading-relaxed"
+                                    className="w-full p-6 bg-gray-50/50 border border-transparent rounded-[2rem] font-bold text-gray-900 text-lg focus:bg-white focus:border-[#ffc107] focus:ring-4 focus:ring-[#ffc107]/10 outline-none transition-all resize-none placeholder:text-gray-300 leading-relaxed"
+                                    placeholder="What do we study here?"
                                 />
                             </div>
 
-                            <button
-                                type="submit"
-                                disabled={isSaving}
-                                className="w-full h-16 bg-black text-white rounded-[2rem] font-black text-xl hover:bg-gray-800 active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:scale-100 mt-12"
-                            >
-                                {isSaving ? (
-                                    <>
-                                        <div className="w-5 h-5 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-                                        <span>Saving...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <HugeiconsIcon icon={Tick01Icon} className="w-6 h-6" />
-                                        <span>Save Changes</span>
-                                    </>
-                                )}
-                            </button>
+                            <div className="pt-4 flex flex-col items-center">
+                                <button
+                                    type="submit"
+                                    disabled={isSaving}
+                                    className="w-full h-20 bg-black text-white rounded-full font-black text-2xl hover:bg-zinc-800 active:scale-95 transition-all shadow-2xl flex items-center justify-center gap-4 disabled:opacity-50 disabled:scale-100"
+                                >
+                                    {isSaving ? (
+                                        <>
+                                            <div className="w-6 h-6 border-4 border-[#ffc107] border-t-transparent rounded-full animate-spin"></div>
+                                            <span>Saving Changes...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <HugeiconsIcon icon={Tick01Icon} className="w-6 h-6 text-[#ffc107]" />
+                                            <span>Save Changes</span>
+                                        </>
+                                    )}
+                                </button>
+                                <p className="text-gray-400 text-xs font-bold uppercase tracking-[0.2em] mt-6">All changes are reflected instantly</p>
+                            </div>
+
+                            <div className="h-20 md:hidden" />
                         </form>
                     </div>
                 </div>

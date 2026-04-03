@@ -312,7 +312,7 @@ function SearchResults() {
                     onRefresh={() => handleSearch(localQuery.trim() || query.trim(), activeTab, profile?.institution, true)}
                     className="flex-1"
                 >
-                    <div id="dashboard-scroll-container" className="flex flex-col gap-4 min-h-[50vh]">
+                    <div className="flex flex-col gap-4 min-h-[50vh]">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20">
                             <div className="w-10 h-10 border-4 border-[#ffc107] border-t-transparent rounded-full animate-spin"></div>

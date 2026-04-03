@@ -159,16 +159,22 @@ const Navbar = () => {
     const handleLogoClick = (e) => {
         e.preventDefault();
         
-        // Check standard window scroll first
-        if (window.scrollY > 0) {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Check for our custom scroll containers used in Dashboard/Search/Profile
+        const dashboardContainer = document.getElementById('dashboard-scroll-container');
+        if (dashboardContainer && dashboardContainer.scrollTop > 0) {
+            dashboardContainer.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
 
-        // Check for our custom scroll containers used in Dashboard/Search/Profile
-        const customScrollContainer = document.getElementById('dashboard-scroll-container');
-        if (customScrollContainer && customScrollContainer.scrollTop > 0) {
-            customScrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+        const mainContainer = document.getElementById('main-scroll-area');
+        if (mainContainer && mainContainer.scrollTop > 0) {
+            mainContainer.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
+        // Check standard window scroll last
+        if (window.scrollY > 0) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
 

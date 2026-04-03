@@ -59,16 +59,18 @@ const downloadFile = async (url, fallbackName = 'attachment') => {
 export default function ChatWindowPage() {
     const { id } = useParams();
     const router = useRouter();
-    const [messages, setMessages] = useState([]);
+    const supabase = createClient();
+    const { confirmAction, showToast, openReportModal, showImage } = useUI();
+    const { setActiveConversation, refreshUnreadCount, messagesCache, updateMessagesCache } = useChatConfig();
+
+    const [messages, setMessages] = useState(messagesCache[id] || []);
     const [conversation, setConversation] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
     const [newMessage, setNewMessage] = useState("");
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!messagesCache[id]);
     const scrollRef = useRef(null);
     const fileInputRef = useRef(null);
-    const supabase = createClient();
-    const { confirmAction, showToast, openReportModal, showImage } = useUI();
-    const { setActiveConversation, refreshUnreadCount } = useChatConfig();
+    const isFirstLoad = useRef(true);
 
     const [selectedAttachments, setSelectedAttachments] = useState([]);
     const [attachmentPreviews, setAttachmentPreviews] = useState([]);
@@ -138,6 +140,7 @@ export default function ChatWindowPage() {
                     } : null
                 }));
                 setMessages(formattedMessages);
+                updateMessagesCache(id, formattedMessages);
 
                 // Mark incoming messages as read
                 if (msgData?.length > 0) {
@@ -238,8 +241,18 @@ export default function ChatWindowPage() {
     }, [id]);
 
     useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        if (scrollRef.current && messages.length > 0) {
+            if (isFirstLoad.current) {
+                // Instant jump on first load to prevent visible "scrolling" delay
+                scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                isFirstLoad.current = false;
+            } else {
+                // Smooth scroll for subsequent real-time messages
+                scrollRef.current.scrollTo({
+                    top: scrollRef.current.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
         }
     }, [messages]);
 
@@ -499,7 +512,7 @@ export default function ChatWindowPage() {
 
                 <div className="flex-1 flex flex-col h-full overflow-hidden shrink-0 min-w-0">
                     {/* Chat Header */}
-                    <div className="sticky top-0 z-10 bg-white px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
+                    <div className="sticky top-0 z-30 bg-white px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-4 min-w-0">
                             <button onClick={() => router.push('/dashboard/chat')} className="md:hidden p-2 hover:bg-gray-50 rounded-full transition-colors mr-1">
                                 <HugeiconsIcon icon={ArrowLeft01Icon} size={20} className="text-gray-900" />
@@ -539,7 +552,7 @@ export default function ChatWindowPage() {
                     {/* Messages Stream */}
                     <div
                         ref={scrollRef}
-                        className="flex-1 overflow-y-auto p-6 pb-32 md:pb-6 scroll-smooth flex flex-col gap-4 bg-gray-50/20"
+                        className="flex-1 overflow-y-auto p-6 pb-[180px] md:pb-6 scroll-smooth flex flex-col gap-4 bg-gray-50/20"
                     >
                         {/* Gig Reference Card */}
                         {conversation?.gig && (
@@ -746,7 +759,7 @@ export default function ChatWindowPage() {
                     </div>
 
                     {/* Input Area */}
-                    <div className="fixed md:relative bottom-[64px] md:bottom-auto left-0 right-0 md:left-auto md:right-auto p-4 md:p-6 md:pt-0 shrink-0 bg-white/90 md:bg-transparent backdrop-blur-sm md:backdrop-blur-none border-t border-gray-100 md:border-none z-10">
+                    <div className="fixed md:relative bottom-[64px] md:bottom-auto left-0 right-0 md:left-auto md:right-auto p-4 md:p-6 md:pt-0 shrink-0 bg-white/90 md:bg-transparent backdrop-blur-sm md:backdrop-blur-none border-t border-gray-100 md:border-none z-30">
                         {/* Reply Preview */}
                         <AnimatePresence>
                             {replyingTo && (

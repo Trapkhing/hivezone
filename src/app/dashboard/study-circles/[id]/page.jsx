@@ -534,7 +534,7 @@ export default function StudyCircleDetailPage() {
 
             {/* Chat Messages */}
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar bg-gray-50/30">
+            <div className="flex-1 overflow-y-auto custom-scrollbar bg-gray-50/30 pb-10 md:pb-0">
                 {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center opacity-30 mt-10">
                         <HugeiconsIcon icon={InformationCircleIcon} className="w-12 h-12 mb-2" />
@@ -687,7 +687,7 @@ export default function StudyCircleDetailPage() {
             </div>
 
             {/* Input Area */}
-            <div className="p-4 md:p-6 bg-white border-t border-gray-100">
+            <div className="p-4 pb-24 md:pb-6 md:p-6 bg-white border-t border-gray-100">
                 {/* Reply Preview */}
                 {replyingTo && (
                     <div className="mb-3 flex gap-3 animate-in slide-in-from-bottom-2 duration-200">

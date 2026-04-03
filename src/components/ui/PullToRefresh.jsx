@@ -26,8 +26,11 @@ export default function PullToRefresh({ onRefresh, children, className = "" }) {
         if (!wrapper) return;
 
         const handleTouchStart = (e) => {
-            const container = document.getElementById('dashboard-scroll-container') || window;
-            const scrollTop = container.scrollTop ?? container.scrollY;
+            const container = document.getElementById('dashboard-scroll-container') || 
+                              document.getElementById('main-scroll-area') || 
+                              window;
+            
+            const scrollTop = container === window ? window.scrollY : container.scrollTop;
 
             // Only engage if at the absolute top (with a 5px buffer for virtualization scrollers)
             if (scrollTop <= 5 && !isRefreshing) {
@@ -55,6 +58,17 @@ export default function PullToRefresh({ onRefresh, children, className = "" }) {
 
             // If pulling downwards
             if (deltaY > 0) {
+                // Ensure we are really pulling from the top
+                const container = document.getElementById('dashboard-scroll-container') || 
+                                  document.getElementById('main-scroll-area') || 
+                                  window;
+                const scrollTop = container === window ? window.scrollY : container.scrollTop;
+
+                if (scrollTop > 5) {
+                    isPulling.current = false;
+                    return;
+                }
+
                 // Prevent native browser overscroll handling to ensure our visual rules apply
                 if (e.cancelable) e.preventDefault();
 

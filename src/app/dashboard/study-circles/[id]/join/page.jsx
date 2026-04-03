@@ -9,9 +9,7 @@ import {
     ArrowLeft01Icon,
     UserGroupIcon,
     InformationCircleIcon,
-    LockIcon,
-    Tick01Icon,
-    Bookmark02Icon
+    LockIcon
 } from "@hugeicons/core-free-icons";
 import Avatar from "@/components/ui/Avatar";
 import { useUI } from "@/components/ui/UIProvider";
@@ -97,99 +95,119 @@ export default function JoinCirclePage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#fcf6de] flex items-center justify-center p-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+            <div className="min-h-screen bg-[#fcf6de] flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#fcf6de] md:p-8 flex flex-col items-center">
-            <div className="w-full max-w-2xl">
-                <Link
-                    href="/dashboard/study-circles"
-                    className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 font-bold mb-8 group transition-colors px-4 md:px-0"
-                >
-                    <div className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center group-hover:bg-gray-50 transition-colors shadow-sm">
-                        <HugeiconsIcon icon={ArrowLeft01Icon} className="w-5 h-5" />
-                    </div>
-                    Back to Circles
-                </Link>
+        <div className="min-h-screen bg-[#fcf6de] md:p-6 lg:p-10 pb-48 md:pb-12">
+            <div className="max-w-3xl mx-auto">
+                {/* Header Navigation */}
+                <div className="flex items-center justify-between px-6 pt-2 pb-6 md:px-0">
+                    <Link
+                        href="/dashboard/study-circles"
+                        className="group flex items-center gap-3 active:scale-95 transition-transform"
+                    >
+                        <div className="w-11 h-11 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-gray-100 group-hover:bg-gray-50 transition-colors">
+                            <HugeiconsIcon icon={ArrowLeft01Icon} className="w-5 h-5 text-gray-900" />
+                        </div>
+                        <span className="font-bold text-gray-500 group-hover:text-gray-900 transition-colors hidden sm:block">Back to Circles</span>
+                    </Link>
+                </div>
 
-                <div className="bg-white md:rounded-[3rem] md:shadow-xl md:border border-gray-100 overflow-hidden">
-                    <div className="p-8 md:p-12">
-                        <div className="flex flex-col items-center text-center mb-10">
-                            <div className="w-32 h-32 rounded-[2.5rem] border-4 border-[#fff9e6] bg-white shadow-lg overflow-hidden mb-6">
-                                <Avatar src={circle.avatar_url} name={circle.name} className="w-full h-full rounded-none" />
+                <div className="bg-white md:rounded-[3rem] shadow-2xl shadow-black/5 overflow-hidden">
+                    {/* Immersive Banner */}
+                    <div className="h-40 md:h-56 bg-zinc-900 relative">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 md:left-12 md:translate-x-0">
+                            <div className="w-32 h-32 md:w-44 md:h-44 rounded-[2.5rem] bg-white p-2 shadow-2xl border-4 border-white">
+                                <Avatar src={circle.avatar_url} name={circle.name} className="w-full h-full rounded-[2rem]" />
                             </div>
-                            <h1 className="text-4xl font-black font-newyork text-gray-900 mb-2">{circle.name}</h1>
-                            <div className="flex items-center gap-3">
-                                <span className="bg-blue-600 text-white text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                                    {circle.course || "General"}
-                                </span>
-                                <div className="flex items-center gap-1 text-gray-500 font-bold text-sm">
-                                    <HugeiconsIcon icon={UserGroupIcon} className="w-4 h-4" />
-                                    {circle.member_count} members
+                        </div>
+                    </div>
+
+                    <div className="px-6 pt-20 pb-10 md:px-12 md:pt-24 md:pb-16">
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+                            <div className="flex-1 text-center md:text-left">
+                                <h1 className="text-4xl md:text-6xl font-black font-newyork text-gray-900 tracking-tight mb-4">
+                                    {circle.name}
+                                </h1>
+                                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
+                                    <div className="px-4 py-1.5 bg-[#fcf6de] border border-[#ffc107] text-[#8a6800] text-sm font-black rounded-full uppercase tracking-wider">
+                                        {circle.course || "General"}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-gray-400 font-bold">
+                                        <HugeiconsIcon icon={UserGroupIcon} className="w-5 h-5" />
+                                        <span>{circle.member_count} community members</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="space-y-8">
-                            <div className="bg-gray-50 rounded-[2rem] p-8 border border-gray-100">
-                                <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                    <HugeiconsIcon icon={InformationCircleIcon} className="w-4 h-4" />
-                                    About this Circle
-                                </h3>
-                                <p className="text-gray-700 font-medium leading-relaxed text-lg">
-                                    {circle.description || "No description provided for this circle."}
-                                </p>
+                        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-12">
+                            <div className="space-y-10">
+                                {/* About Section */}
+                                <div className="space-y-4">
+                                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                        <HugeiconsIcon icon={InformationCircleIcon} className="w-4 h-4 text-[#ffc107]" />
+                                        About our Circle
+                                    </h3>
+                                    <p className="text-gray-700 font-bold leading-relaxed text-xl font-newyork whitespace-pre-wrap">
+                                        {circle.description || "Welcome to our group. We focus on shared learning and collective growth."}
+                                    </p>
+                                </div>
+
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
-                                    <div className="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center">
-                                        <HugeiconsIcon icon={Tick01Icon} className="w-5 h-5" />
+                            {/* Sidebar-style info */}
+                            <div className="space-y-6">
+                                <div className="p-6 bg-[#fcf6de]/40 rounded-[2rem] border-2 border-[#ffc107]/20 border-dashed">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${circle.is_private ? 'bg-zinc-900 text-white' : 'bg-green-500 text-white'}`}>
+                                            <HugeiconsIcon icon={circle.is_private ? LockIcon : UserGroupIcon} className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-black text-gray-900 capitalize">{circle.is_private ? "Private" : "Public"}</h4>
+                                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Access Mode</p>
+                                        </div>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[13px] font-black text-gray-900">Collaborative</span>
-                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Learning Style</span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
-                                    <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
-                                        <HugeiconsIcon icon={Bookmark02Icon} className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[13px] font-black text-gray-900">Resource Sharing</span>
-                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Included Feature</span>
-                                    </div>
+                                    <p className="text-xs text-gray-600 font-medium leading-relaxed">
+                                        {circle.is_private ? "You will need an invite code to access the contents of this circle once admitted." : "This is an open community where any student can join and start sharing ideas immediately."}
+                                    </p>
                                 </div>
                             </div>
+                        </div>
 
+                        <div className="mt-16 pt-8 border-t border-gray-50">
                             <button
                                 onClick={handleJoin}
                                 disabled={isJoining}
-                                className="w-full h-20 bg-black text-white rounded-[2rem] font-black text-2xl hover:bg-gray-800 active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:scale-100 mt-8"
+                                className="w-full h-24 bg-black text-white rounded-full font-black text-3xl hover:bg-zinc-800 active:scale-95 transition-all shadow-2xl flex items-center justify-center gap-4 disabled:opacity-50 disabled:scale-100 relative group overflow-hidden"
                             >
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer" />
                                 {isJoining ? (
                                     <>
-                                        <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-                                        <span>Joining...</span>
+                                        <div className="w-8 h-8 border-4 border-[#ffc107] border-t-transparent rounded-full animate-spin"></div>
+                                        <span>Joining Community...</span>
                                     </>
                                 ) : (
                                     <>
-                                        <HugeiconsIcon icon={UserGroupIcon} className="w-6 h-6" />
-                                        <span>Join Study Circle</span>
+                                        <HugeiconsIcon icon={UserGroupIcon} className="w-8 h-8 text-[#ffc107]" />
+                                        <span>Join this Circle</span>
                                     </>
                                 )}
                             </button>
-
-                            <p className="text-center text-gray-400 text-xs font-bold uppercase tracking-widest mt-4">
-                                Join to access chat, resources, and more
+                            <p className="text-center text-gray-400 text-xs font-bold uppercase tracking-[0.3em] mt-8">
+                                One click to join your new hive
                             </p>
                         </div>
                     </div>
                 </div>
+
+                {/* Safe Area Spacer for Mobile */}
+                <div className="h-32 md:hidden" />
             </div>
         </div>
     );

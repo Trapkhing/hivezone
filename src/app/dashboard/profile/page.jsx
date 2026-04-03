@@ -324,10 +324,10 @@ export default function ProfilePage() {
 
     return (
         <PullToRefresh onRefresh={() => fetchUser(true)} className="flex-1">
-            <div id="dashboard-scroll-container" className="flex flex-col h-full bg-white md:bg-[#fcf6de] md:p-4 lg:p-8 md:pt-0 max-w-[950px] mx-auto w-full overflow-y-auto">
+            <div className="flex flex-col h-full bg-white md:bg-[#fcf6de] md:p-4 lg:p-8 md:pt-0 max-w-[950px] mx-auto w-full">
 
                 {/* Main Content Layout */}
-                <div className="flex-1 overflow-y-auto scrollbar-hide pb-20 md:pb-10 w-full">
+                <div className="flex-1 pb-20 md:pb-10 w-full">
                 <div className="bg-white md:bg-[#f4f4f4] md:rounded-[2.5rem] w-full min-h-[85vh] flex flex-col overflow-hidden relative md:border md:border-gray-200 md:shadow-sm">
 
                     {/* Cover Photo Area */}
