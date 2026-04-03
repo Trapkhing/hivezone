@@ -12,7 +12,9 @@ import {
     UserGroupIcon,
     LockIcon,
     Delete02Icon,
-    LicenseIcon
+    LicenseIcon,
+    Copy01Icon,
+    SentIcon
 } from "@hugeicons/core-free-icons";
 import { createClient } from "@/utils/supabase/client";
 import { useUI } from "@/components/ui/UIProvider";
@@ -29,13 +31,15 @@ export default function EditCirclePage({ params }) {
     const [selectedAvatarFile, setSelectedAvatarFile] = useState(null);
     const [avatarPreview, setAvatarPreview] = useState("");
     const fileInputRef = useRef(null);
+    const [copied, setCopied] = useState(false);
 
     const [formData, setFormData] = useState({
         name: "",
         course: "",
         description: "",
         is_private: false,
-        avatar_url: ""
+        avatar_url: "",
+        invite_code: ""
     });
 
     useEffect(() => {
@@ -77,7 +81,8 @@ export default function EditCirclePage({ params }) {
                 course: circle.course || "",
                 description: circle.description || "",
                 is_private: circle.is_private,
-                avatar_url: circle.avatar_url || ""
+                avatar_url: circle.avatar_url || "",
+                invite_code: circle.invite_code || ""
             });
             setIsLoading(false);
         };
@@ -295,6 +300,30 @@ export default function EditCirclePage({ params }) {
                                 </div>
                             </div>
 
+                            {formData.is_private && formData.invite_code && (
+                                <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
+                                    <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Unique Invite Code</label>
+                                    <div className="flex items-center gap-4 p-6 bg-zinc-900 rounded-[2rem] border-2 border-zinc-900 shadow-xl shadow-black/5">
+                                        <div className="flex flex-col flex-1 pl-2">
+                                            <span className="text-[10px] font-black text-[#ffc107] uppercase tracking-widest mb-1">Share with peers</span>
+                                            <span className="text-2xl font-black text-white tracking-[0.2em]">{formData.invite_code}</span>
+                                        </div>
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(formData.invite_code);
+                                                setCopied(true);
+                                                setTimeout(() => setCopied(false), 2000);
+                                            }}
+                                            className="w-14 h-14 bg-white/10 hover:bg-white/20 rounded-2xl flex items-center justify-center transition-all active:scale-95"
+                                        >
+                                            <HugeiconsIcon icon={copied ? Tick01Icon : Copy01Icon} className={`w-6 h-6 ${copied ? 'text-[#ffc107]' : 'text-white'}`} />
+                                        </button>
+                                    </div>
+                                    <p className="text-[11px] font-bold text-gray-400 ml-1 italic">* This code is required for anyone who wishes to join your private circle.</p>
+                                </div>
+                            )}
+
                             <div className="space-y-3">
                                 <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-1">About our Circle</label>
                                 <textarea
@@ -311,7 +340,7 @@ export default function EditCirclePage({ params }) {
                                 <button
                                     type="submit"
                                     disabled={isSaving}
-                                    className="w-full h-20 bg-black text-white rounded-full font-black text-2xl hover:bg-zinc-800 active:scale-95 transition-all shadow-2xl flex items-center justify-center gap-4 disabled:opacity-50 disabled:scale-100"
+                                    className="w-full h-16 bg-black text-white rounded-full font-black text-xl hover:bg-zinc-800 active:scale-95 transition-all shadow-2xl flex items-center justify-center gap-4 disabled:opacity-50 disabled:scale-100"
                                 >
                                     {isSaving ? (
                                         <>

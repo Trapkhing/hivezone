@@ -10,7 +10,10 @@ import {
     File01Icon,
     Link01Icon,
     LogoutCircle02Icon,
-    Settings02Icon
+    Settings02Icon,
+    Copy01Icon,
+    Tick01Icon,
+    LockIcon
 } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import Avatar from "@/components/ui/Avatar";
@@ -21,6 +24,7 @@ export default function GroupInfoDrawer({ isOpen, onClose, circle, profile, onLe
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState("members"); // members, media, docs
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         if (isOpen && circle?.id) {
@@ -78,7 +82,7 @@ export default function GroupInfoDrawer({ isOpen, onClose, circle, profile, onLe
                         <p className="text-sm font-bold text-gray-500 mb-4">{circle.member_count} Members</p>
 
                         {circle.description && (
-                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm w-full text-left">
+                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm w-full text-left mb-4">
                                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                                     <HugeiconsIcon icon={InformationCircleIcon} className="w-3.5 h-3.5" />
                                     Description
@@ -86,6 +90,34 @@ export default function GroupInfoDrawer({ isOpen, onClose, circle, profile, onLe
                                 <p className="text-sm text-gray-700 leading-relaxed font-medium">
                                     {circle.description}
                                 </p>
+                            </div>
+                        )}
+
+                        {circle.is_private && circle.invite_code && (
+                            <div className="bg-zinc-900 p-5 rounded-2xl shadow-xl w-full text-left relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <HugeiconsIcon icon={LockIcon} className="w-12 h-12 text-white" />
+                                </div>
+                                <h4 className="text-[10px] font-black text-[#ffc107] uppercase tracking-widest mb-3 flex items-center gap-2 relative z-10">
+                                    <HugeiconsIcon icon={UserGroupIcon} className="w-3.5 h-3.5" />
+                                    Join Information
+                                </h4>
+                                <div className="flex items-center justify-between gap-4 relative z-10">
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-0.5">Invite Code</span>
+                                        <span className="text-xl font-black text-white tracking-widest">{circle.invite_code}</span>
+                                    </div>
+                                    <button 
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(circle.invite_code);
+                                            setCopied(true);
+                                            setTimeout(() => setCopied(false), 2000);
+                                        }}
+                                        className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center text-white transition-all active:scale-95"
+                                    >
+                                        <HugeiconsIcon icon={copied ? Tick01Icon : Copy01Icon} className={`w-5 h-5 ${copied ? 'text-[#ffc107]' : ''}`} />
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -145,22 +177,23 @@ export default function GroupInfoDrawer({ isOpen, onClose, circle, profile, onLe
 
                 {/* Footer Controls */}
                 <div className="p-6 border-t border-gray-100 bg-gray-50/50 space-y-3">
-                    {profile?.id === circle?.created_by && (
+                    {profile?.id === circle?.created_by ? (
                         <Link
                             href={`/dashboard/study-circles/${circle.id}/edit`}
                             className="w-full h-12 rounded-xl bg-black text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors"
                         >
                             <HugeiconsIcon icon={Settings02Icon} className="w-4 h-4" />
-                            Edit Circle Settings
+                            Edit Settings
                         </Link>
+                    ) : (
+                        <button
+                            onClick={onLeave}
+                            className="w-full h-12 rounded-xl border border-red-100 bg-red-50 text-red-600 font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
+                        >
+                            <HugeiconsIcon icon={LogoutCircle02Icon} className="w-4 h-4" />
+                            Leave Circle
+                        </button>
                     )}
-                    <button
-                        onClick={onLeave}
-                        className="w-full h-12 rounded-xl border border-red-100 bg-red-50 text-red-600 font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
-                    >
-                        <HugeiconsIcon icon={LogoutCircle02Icon} className="w-4 h-4" />
-                        Leave Study Circle
-                    </button>
                 </div>
             </div>
         </div>

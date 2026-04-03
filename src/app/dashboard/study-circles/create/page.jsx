@@ -11,7 +11,10 @@ import {
     Attachment01Icon,
     UserGroupIcon,
     LockIcon,
-    Cancel01Icon
+    Cancel01Icon,
+    Copy01Icon,
+    Tick01Icon,
+    SentIcon
 } from "@hugeicons/core-free-icons";
 import { createClient } from "@/utils/supabase/client";
 import { useUI } from "@/components/ui/UIProvider";
@@ -33,6 +36,10 @@ export default function CreateCirclePage() {
         description: "",
         is_private: false
     });
+
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [createdCircle, setCreatedCircle] = useState(null);
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         const checkUser = async () => {
@@ -117,8 +124,9 @@ export default function CreateCirclePage() {
                 user_id: profile.id
             });
 
+            setCreatedCircle(data);
+            setShowSuccessModal(true);
             showToast("Study Circle created!", "success");
-            router.push("/dashboard/study-circles");
         } else {
             showToast("Failed to create circle", "error");
         }
@@ -177,7 +185,7 @@ export default function CreateCirclePage() {
                         </div>
 
                         {/* Heading Area */}
-                        <div className="mt-16 md:mt-24 mb-12">
+                    <div className="mt-16 md:mt-24 mb-12 px-2">
                             <h1 className="text-4xl font-black font-newyork text-gray-900 tracking-tight mb-2 text-center md:text-left">Start a Circle</h1>
                             <p className="text-gray-500 font-medium text-lg leading-tight text-center md:text-left">Build a custom space for shared learning.</p>
                         </div>
@@ -259,7 +267,7 @@ export default function CreateCirclePage() {
                                 <button
                                     type="submit"
                                     disabled={isLoading}
-                                    className="w-full h-20 bg-black text-white rounded-full font-black text-2xl hover:bg-zinc-800 active:scale-95 transition-all shadow-2xl flex items-center justify-center gap-4 disabled:opacity-50 disabled:scale-100"
+                                    className="w-full h-16 bg-black text-white rounded-full font-black text-xl hover:bg-zinc-800 active:scale-95 transition-all shadow-2xl flex items-center justify-center gap-4 disabled:opacity-50 disabled:scale-100"
                                 >
                                     {isLoading ? (
                                         <>
@@ -268,8 +276,8 @@ export default function CreateCirclePage() {
                                         </>
                                     ) : (
                                         <>
-                                            <HugeiconsIcon icon={Add01Icon} className="w-6 h-6 text-[#ffc107]" />
-                                            <span>Start this Circle</span>
+                                            <HugeiconsIcon icon={Add01Icon} className="w-5 h-5 text-[#ffc107]" />
+                                            <span>Start Circle</span>
                                         </>
                                     )}
                                 </button>
@@ -281,6 +289,48 @@ export default function CreateCirclePage() {
                     </div>
                 </div>
             </div>
+
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-md animate-in fade-in duration-300" />
+                    <div className="relative w-full max-w-md bg-white rounded-[3rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300 text-center border-4 border-white">
+                        <div className="w-20 h-20 bg-[#ffc107] text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-200">
+                            <HugeiconsIcon icon={Tick01Icon} className="w-10 h-10" />
+                        </div>
+                        
+                        <h2 className="text-3xl font-black font-newyork text-gray-900 mb-2">Circle Ready!</h2>
+                        <p className="text-gray-500 font-bold mb-8">Your peer learning space is officially open.</p>
+
+                        {createdCircle?.is_private && (
+                            <div className="mb-8 p-6 bg-gray-50 rounded-[2rem] border border-gray-100">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] block mb-3">Unique Invite Code</span>
+                                <div className="flex items-center justify-between gap-4">
+                                    <span className="text-2xl font-black text-zinc-900 tracking-wider flex-1 text-left px-4">{createdCircle?.invite_code}</span>
+                                    <button 
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(createdCircle?.invite_code);
+                                            setCopied(true);
+                                            setTimeout(() => setCopied(false), 2000);
+                                        }}
+                                        className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-gray-100 text-gray-400 hover:text-black transition-colors"
+                                    >
+                                        <HugeiconsIcon icon={copied ? Tick01Icon : Copy01Icon} className={`w-5 h-5 ${copied ? 'text-green-500' : ''}`} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={() => router.push(`/dashboard/study-circles/${createdCircle?.id}`)}
+                            className="w-full h-14 bg-black text-white rounded-full font-black text-lg hover:bg-zinc-800 active:scale-95 transition-all flex items-center justify-center gap-3"
+                        >
+                            <span>Enter Circle</span>
+                            <HugeiconsIcon icon={SentIcon} className="w-5 h-5 text-[#ffc107]" />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -17,12 +17,16 @@ import {
     LogoutCircle02Icon,
     Download01Icon,
     ArrowMoveUpLeftIcon,
-    Settings02Icon
+    Settings02Icon,
+    Delete01Icon
 } from "@hugeicons/core-free-icons";
 import Avatar from "@/components/ui/Avatar";
 import { useUI } from "@/components/ui/UIProvider";
+import { useStudyCircles } from "@/components/dashboard/StudyCirclesContext";
 import GroupInfoDrawer from "@/components/dashboard/GroupInfoDrawer";
 import Linkify from "@/components/ui/Linkify";
+import { compressForChat } from "@/utils/compressImage";
+import AutoPauseVideo from "@/components/ui/AutoPauseVideo";
 
 const formatDate = (date) => {
     return new Intl.DateTimeFormat("en-US", {
@@ -62,6 +66,7 @@ const downloadFile = async (url, fallbackName = 'attachment') => {
 export default function StudyCircleDetailPage() {
     const { id: circleId } = useParams();
     const { showToast, confirmAction, showImage } = useUI();
+    const { handleLeaveCircle: contextLeaveCircle } = useStudyCircles();
     const supabase = createClient();
     const router = useRouter();
 
@@ -106,6 +111,13 @@ export default function StudyCircleDetailPage() {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [isMoreMenuOpen]);
+
+    // Force a re-render every minute to update the "is deletable" 30-min window constraint
+    const [, setTick] = useState(0);
+    useEffect(() => {
+        const interval = setInterval(() => setTick(t => t + 1), 60000);
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -359,7 +371,9 @@ export default function StudyCircleDetailPage() {
 
         if (msgAttachmentFiles.length > 0) {
             const uploadPromises = msgAttachmentFiles.map(async (file, index) => {
-                const fileExt = file.name.split('.').pop();
+                // Compress images before upload
+                const fileToUpload = await compressForChat(file);
+                const fileExt = fileToUpload.name.split('.').pop();
                 const fileName = `study-circle-attachments/${profile.id}-${Date.now()}-${index}.${fileExt}`;
 
                 // 1. Get presigned URL from our API
@@ -378,8 +392,8 @@ export default function StudyCircleDetailPage() {
                 // 2. Upload directly to Cloudflare R2
                 const uploadResponse = await fetch(uploadUrl, {
                     method: "PUT",
-                    headers: { "Content-Type": file.type },
-                    body: file,
+                    headers: { "Content-Type": fileToUpload.type },
+                    body: fileToUpload,
                 });
 
                 if (!uploadResponse.ok) throw new Error("Failed to upload");
@@ -420,9 +434,9 @@ export default function StudyCircleDetailPage() {
     const handleAttachmentSelect = (e) => {
         const files = Array.from(e.target.files);
         if (files.length > 0) {
-            const validFiles = files.filter(file => (file.size / (1024 * 1024)) <= 15);
+            const validFiles = files.filter(file => (file.size / (1024 * 1024)) <= 20);
             if (validFiles.length !== files.length) {
-                showToast("Some files are larger than 15MB and were excluded.", "error");
+                showToast("Some files are larger than 20MB and were excluded.", "error");
             }
             if (validFiles.length > 0) {
                 setSelectedAttachments(prev => [...prev, ...validFiles]);
@@ -432,6 +446,49 @@ export default function StudyCircleDetailPage() {
         e.target.value = "";
     };
 
+    const handleDeleteMessage = async (msgId) => {
+        confirmAction({
+            title: "Delete message",
+            message: "Are you sure you want to delete this message? This cannot be undone.",
+            confirmText: "Delete",
+            cancelText: "Cancel",
+            onConfirm: async () => {
+                // Optimistically remove
+                const previousMessages = [...messages];
+                setMessages(prev => prev.filter(m => m.id !== msgId));
+
+                const { error } = await supabase
+                    .from('study_circle_messages')
+                    .delete()
+                    .eq('id', msgId)
+                    .eq('user_id', profile.id);
+
+                if (error) {
+                    console.error("Error deleting message:", error);
+                    showToast("Failed to delete message.", "error");
+                    setMessages(previousMessages); // Revert
+                } else {
+                    // Update latest message in study_circles so the sidebar list stays accurate
+                    const { data: latestMsg } = await supabase
+                        .from('study_circle_messages')
+                        .select('content')
+                        .eq('circle_id', circleId)
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .single();
+
+                    await supabase
+                        .from('study_circles')
+                        .update({
+                            last_message: latestMsg ? latestMsg.content : "Message deleted",
+                            last_message_at: new Date().toISOString()
+                        })
+                        .eq('id', circleId);
+                }
+            }
+        });
+    };
+
     const handleLeaveCircle = async () => {
         confirmAction({
             title: "Leave Study Circle",
@@ -439,16 +496,8 @@ export default function StudyCircleDetailPage() {
             confirmText: "Leave",
             cancelText: "Stay",
             action: async () => {
-                const { error } = await supabase
-                    .from("study_circle_members")
-                    .delete()
-                    .eq("circle_id", circleId)
-                    .eq("user_id", profile.id);
-
-                if (!error) {
-                    showToast("Left Circle", "success");
-                    router.push('/dashboard/study-circles');
-                }
+                await contextLeaveCircle(circleId);
+                router.push('/dashboard/study-circles');
             }
         });
     };
@@ -515,10 +564,12 @@ export default function StudyCircleDetailPage() {
                                         Circle Settings
                                     </Link>
                                 )}
-                                <button onClick={handleLeaveCircle} className="w-full px-4 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-3">
-                                    <HugeiconsIcon icon={LogoutCircle02Icon} className="w-4 h-4" />
-                                    Leave Circle
-                                </button>
+                                {profile?.id !== circleData?.created_by && (
+                                    <button onClick={handleLeaveCircle} className="w-full px-4 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-3">
+                                        <HugeiconsIcon icon={LogoutCircle02Icon} className="w-4 h-4" />
+                                        Leave Circle
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -532,7 +583,6 @@ export default function StudyCircleDetailPage() {
                 </div>
             </div>
 
-            {/* Chat Messages */}
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto custom-scrollbar bg-gray-50/30 pb-32 md:pb-10">
                 {messages.length === 0 ? (
@@ -573,110 +623,142 @@ export default function StudyCircleDetailPage() {
                                         </span>
                                     </div>
                                     <div className="px-4 md:px-6 space-y-4 pb-8">
-                                        {dayMessages.map((msg, idx) => (
-                                            <div key={msg.id || idx} className={`flex ${msg.user_id === profile?.id ? 'justify-end' : 'justify-start'}`}>
-                                                <div className={`flex gap-3 max-w-[85%] ${msg.user_id === profile?.id ? 'flex-row-reverse' : ''}`}>
-                                                    {msg.user_id !== profile?.id && (
-                                                        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 mt-1">
-                                                            <Avatar src={msg.avatar} name={msg.sender} className="w-full h-full" />
-                                                        </div>
-                                                    )}
-                                                    <div className="flex flex-col">
-                                                        <div className={`flex items-center gap-2 mb-1 ${msg.user_id === profile?.id ? 'justify-end' : ''}`}>
-                                                            {msg.user_id !== profile?.id && (
-                                                                <span className="text-[11px] font-bold text-gray-500">{msg.sender}</span>
-                                                            )}
-                                                            <span className="text-[10px] text-gray-400">{msg.timestamp}</span>
-                                                        </div>
-                                                        <motion.div
-                                                            drag="x"
-                                                            dragConstraints={{ left: 0, right: 80 }}
-                                                            dragElastic={0.2}
-                                                            dragSnapToOrigin={true}
-                                                            onDragEnd={(e, info) => {
-                                                                if (info.offset.x > 50) {
-                                                                    setReplyingTo(msg);
-                                                                }
-                                                            }}
-                                                            className={`p-4 rounded-2xl text-[14px] shadow-sm relative group/msg cursor-grab active:cursor-grabbing ${msg.user_id === profile?.id ? 'bg-[#ffc107] text-black rounded-tr-none' : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'}`}
-                                                            whileTap={{ scale: 0.99 }}
-                                                        >
-                                                            {/* Swipe Indicator (Visible when dragging) */}
-                                                            <div className="absolute inset-y-0 -left-10 flex items-center justify-center opacity-0 group-active/msg:opacity-100 transition-opacity">
-                                                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shadow-sm">
-                                                                    <HugeiconsIcon icon={ArrowMoveUpLeftIcon} className="w-4 h-4 text-gray-400" />
-                                                                </div>
-                                                            </div>
+                                        {dayMessages.map((msg, idx) => {
+                                            const isMe = msg.user_id === profile?.id;
+                                            const isTemp = msg.id?.toString().startsWith('temp-');
+                                            const msgAgeMs = new Date() - new Date(msg.created_at_raw);
+                                            const canDelete = isMe && !isTemp && (msgAgeMs < 30 * 60 * 1000);
 
-                                                            {/* Quote Rendering */}
-                                                            {msg.reply_to && (
-                                                                <div className={`mb-2 p-2 rounded-lg border-l-4 text-[12px] bg-black/5 border-black/20 text-gray-600 line-clamp-2`}>
-                                                                    <span className="font-black text-[10px] block uppercase tracking-wider mb-0.5">{msg.reply_to.sender}</span>
-                                                                    {msg.reply_to.text}
+                                            return (
+                                                <div key={msg.id || idx} className={`flex group ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                                    <div className={`flex items-center gap-2 max-w-[85%] ${isMe ? 'flex-row-reverse' : ''}`}>
+                                                        {canDelete && (
+                                                            <button
+                                                                onClick={() => handleDeleteMessage(msg.id)}
+                                                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-100 md:opacity-0 group-hover:opacity-100 shrink-0"
+                                                                title="Delete message"
+                                                            >
+                                                                <HugeiconsIcon icon={Delete01Icon} size={16} />
+                                                            </button>
+                                                        )}
+                                                        <div className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
+                                                            {!isMe && (
+                                                                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 mt-1">
+                                                                    <Avatar src={msg.avatar} name={msg.sender} className="w-full h-full" />
                                                                 </div>
                                                             )}
+                                                            <div className="flex flex-col">
+                                                                <div className={`flex items-center gap-2 mb-1 ${isMe ? 'justify-end' : ''}`}>
+                                                                    {!isMe && (
+                                                                        <span className="text-[11px] font-bold text-gray-500">{msg.sender}</span>
+                                                                    )}
+                                                                    <span className="text-[10px] text-gray-400">{msg.timestamp}</span>
+                                                                </div>
+                                                                <motion.div
+                                                                    drag="x"
+                                                                    dragConstraints={{ left: 0, right: 80 }}
+                                                                    dragElastic={0.2}
+                                                                    dragSnapToOrigin={true}
+                                                                    onDragEnd={(e, info) => {
+                                                                        if (info.offset.x > 50) {
+                                                                            setReplyingTo(msg);
+                                                                        }
+                                                                    }}
+                                                                    className={`p-4 rounded-2xl text-[14px] shadow-sm relative group/msg cursor-grab active:cursor-grabbing ${isMe ? 'bg-[#ffc107] text-black rounded-tr-none' : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'}`}
+                                                                    whileTap={{ scale: 0.99 }}
+                                                                >
+                                                                    {/* Swipe Indicator (Visible when dragging) */}
+                                                                    <div className="absolute inset-y-0 -left-10 flex items-center justify-center opacity-0 group-active/msg:opacity-100 transition-opacity">
+                                                                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shadow-sm">
+                                                                            <HugeiconsIcon icon={ArrowMoveUpLeftIcon} className="w-4 h-4 text-gray-400" />
+                                                                        </div>
+                                                                    </div>
 
-                                                            {msg.attachment && (() => {
-                                                                const urls = msg.attachment.split(',');
-                                                                const images = urls.filter(url => url.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i) || url.startsWith('blob:') || url.match(/\.(jpeg|jpg|gif|png|webp)$/i));
-                                                                const docs = urls.filter(url => !(url.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i) || url.startsWith('blob:') || url.match(/\.(jpeg|jpg|gif|png|webp)$/i)));
-                                                                return (
-                                                                    <div className="mb-2 max-w-[300px] md:max-w-sm rounded-xl flex flex-col gap-1">
-                                                                        {images.length > 0 && (
-                                                                            <div className={`grid gap-1 ${images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} rounded-xl overflow-hidden`}>
-                                                                                {images.map((url, i) => (
-                                                                                    <div key={i} className={`overflow-hidden border border-black/5 ${images.length === 3 && i === 0 ? 'col-span-2 aspect-[2/1]' : images.length === 1 ? 'aspect-auto' : 'aspect-square'} rounded-lg`}>
-                                                                                        <img
-                                                                                            src={url}
-                                                                                            alt="Attachment"
-                                                                                            className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition-opacity"
-                                                                                            onClick={() => showImage(url, "Attachment")}
-                                                                                        />
+                                                                    {/* Quote Rendering */}
+                                                                    {msg.reply_to && (
+                                                                        <div className={`mb-2 p-2 rounded-lg border-l-4 text-[12px] bg-black/5 border-black/20 text-gray-600 line-clamp-2`}>
+                                                                            <span className="font-black text-[10px] block uppercase tracking-wider mb-0.5">{msg.reply_to.sender}</span>
+                                                                            {msg.reply_to.text}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {msg.attachment && (() => {
+                                                                        const urls = msg.attachment.split(',');
+                                                                        const isImage = (url) => url.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i) || url.startsWith('blob:');
+                                                                        const isVideo = (url) => url.match(/\.(mp4|webm|ogg|mov)(\?.*)?$/i);
+                                                                        
+                                                                        const images = urls.filter(isImage);
+                                                                        const videos = urls.filter(isVideo);
+                                                                        const docs = urls.filter(url => !isImage(url) && !isVideo(url));
+                                                                        
+                                                                        return (
+                                                                            <div className="mb-2 max-w-[300px] md:max-w-sm rounded-xl flex flex-col gap-1">
+                                                                                {images.length > 0 && (
+                                                                                    <div className={`grid gap-1 ${images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} rounded-xl overflow-hidden`}>
+                                                                                        {images.map((url, i) => (
+                                                                                            <div key={i} className={`overflow-hidden border border-black/5 ${images.length === 3 && i === 0 ? 'col-span-2 aspect-[2/1]' : images.length === 1 ? 'aspect-auto' : 'aspect-square'} rounded-lg`}>
+                                                                                                <img
+                                                                                                    src={url}
+                                                                                                    alt="Attachment"
+                                                                                                    className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                                                                                                    onClick={() => showImage(url, "Attachment")}
+                                                                                                />
+                                                                                            </div>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                )}
+                                                                                {videos.length > 0 && (
+                                                                                    <div className="flex flex-col gap-2 rounded-xl overflow-hidden mt-1">
+                                                                                        {videos.map((url, i) => (
+                                                                                            <div key={i} className="rounded-lg overflow-hidden border border-black/5 bg-black">
+                                                                                                <AutoPauseVideo src={url} className="w-full max-h-[400px]" />
+                                                                                            </div>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                )}
+                                                                                {docs.length > 0 && docs.map((url, i) => (
+                                                                                    <div
+                                                                                        key={i}
+                                                                                        onClick={() => downloadFile(url, `attachment-${msg.id}-${i}`)}
+                                                                                        className={`flex items-center justify-between gap-3 p-3 rounded-xl border border-black/5 cursor-pointer hover:opacity-90 transition-opacity mt-1 bg-black/5`}
+                                                                                    >
+                                                                                        <div className="flex items-center gap-3 overflow-hidden">
+                                                                                            <div className="w-10 h-10 bg-white/50 shrink-0 rounded-full flex items-center justify-center">
+                                                                                                <HugeiconsIcon icon={Download01Icon} className="w-5 h-5 opacity-70" />
+                                                                                            </div>
+                                                                                            <div className="flex flex-col overflow-hidden">
+                                                                                                <span className="text-xs font-bold truncate max-w-[150px]">
+                                                                                                    {(() => {
+                                                                                                        try {
+                                                                                                            const urlObj = new URL(url);
+                                                                                                            const pathParts = urlObj.pathname.split('/');
+                                                                                                            const lastPart = pathParts[pathParts.length - 1];
+                                                                                                            const cleanName = decodeURIComponent(lastPart).replace(/^[^-]+-\d+\./, '');
+                                                                                                            return cleanName || 'Document';
+                                                                                                        } catch (e) {
+                                                                                                            return 'Document';
+                                                                                                        }
+                                                                                                    })()}
+                                                                                                </span>
+                                                                                                <span className="text-[10px] opacity-60 uppercase">{url.split('.').pop()?.split('?')[0] || 'FILE'}</span>
+                                                                                            </div>
+                                                                                        </div>
                                                                                     </div>
                                                                                 ))}
                                                                             </div>
-                                                                        )}
-                                                                        {docs.length > 0 && docs.map((url, i) => (
-                                                                            <div
-                                                                                key={i}
-                                                                                onClick={() => downloadFile(url, `attachment-${msg.id}-${i}`)}
-                                                                                className={`flex items-center justify-between gap-3 p-3 rounded-xl border border-black/5 cursor-pointer hover:opacity-90 transition-opacity mt-1 bg-black/5`}
-                                                                            >
-                                                                                <div className="flex items-center gap-3 overflow-hidden">
-                                                                                    <div className="w-10 h-10 bg-white/50 shrink-0 rounded-full flex items-center justify-center">
-                                                                                        <HugeiconsIcon icon={Download01Icon} className="w-5 h-5 opacity-70" />
-                                                                                    </div>
-                                                                                    <div className="flex flex-col overflow-hidden">
-                                                                                        <span className="text-xs font-bold truncate max-w-[150px]">
-                                                                                            {(() => {
-                                                                                                try {
-                                                                                                    const urlObj = new URL(url);
-                                                                                                    const pathParts = urlObj.pathname.split('/');
-                                                                                                    const lastPart = pathParts[pathParts.length - 1];
-                                                                                                    const cleanName = decodeURIComponent(lastPart).replace(/^[^-]+-\d+\./, '');
-                                                                                                    return cleanName || 'Document';
-                                                                                                } catch (e) {
-                                                                                                    return 'Document';
-                                                                                                }
-                                                                                            })()}
-                                                                                        </span>
-                                                                                        <span className="text-[10px] opacity-60 uppercase">{url.split('.').pop()?.split('?')[0] || 'FILE'}</span>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                );
-                                                            })()}
-                                                            <Linkify
-                                                                text={msg.text}
-                                                                className={`whitespace-pre-wrap ${msg.user_id === profile?.id ? 'text-black [&_a]:text-black [&_a]:underline' : ''}`}
-                                                            />
-                                                        </motion.div>
+                                                                        );
+                                                                    })()}
+                                                                    <Linkify
+                                                                        text={msg.text}
+                                                                        className={`whitespace-pre-wrap ${isMe ? 'text-black [&_a]:text-black [&_a]:underline' : ''}`}
+                                                                    />
+                                                                </motion.div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             );
@@ -712,6 +794,8 @@ export default function StudyCircleDetailPage() {
                             <div key={idx} className="relative inline-block border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm p-1 pr-8">
                                 {selectedAttachments[idx]?.type.startsWith('image/') ? (
                                     <img src={preview} alt="Preview" className="h-16 w-auto rounded-lg object-cover" />
+                                ) : selectedAttachments[idx]?.type.startsWith('video/') ? (
+                                    <video src={preview} className="h-16 w-auto rounded-lg object-cover" />
                                 ) : (
                                     <div className="flex items-center gap-3 px-3 py-2">
                                         <HugeiconsIcon icon={Attachment01Icon} className="w-5 h-5 text-gray-500" />

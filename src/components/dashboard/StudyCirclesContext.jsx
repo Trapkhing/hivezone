@@ -23,7 +23,7 @@ const formatDate = (date) => {
 };
 
 export const StudyCirclesProvider = ({ children }) => {
-    const supabase = createClient();
+    const [supabase] = useState(() => createClient());
     const { showToast } = useUI();
     const [profile, setProfile] = useState(null);
     const [myCircles, setMyCircles] = useState([]);
@@ -163,6 +163,8 @@ export const StudyCirclesProvider = ({ children }) => {
             showToast("Failed to leave circle", "error");
         } else {
             showToast("Left circle successfully", "success");
+            // Optimistic update
+            setMyCircles(prev => prev.filter(c => c.id !== circleId));
             fetchMyCircles(profile.id);
             fetchDiscoverCircles(profile.id);
         }

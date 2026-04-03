@@ -14,6 +14,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import Avatar from "@/components/ui/Avatar";
 import { useUI } from "@/components/ui/UIProvider";
+import { useStudyCircles } from "./StudyCirclesContext";
 
 const formatDate = (date) => {
     return new Intl.DateTimeFormat("en-US", {
@@ -27,128 +28,28 @@ export default function StudyCircleSidebar({ activeId, isMobileVisible = true })
     const { showToast } = useUI();
     const supabase = createClient();
     const router = useRouter();
+    const { 
+        myCircles, 
+        discoverCircles, 
+        loading, 
+        profile, 
+        fetchMyCircles, 
+        fetchDiscoverCircles,
+        handleJoinCircle: contextJoinCircle 
+    } = useStudyCircles();
+    
     const [searchQuery, setSearchQuery] = useState("");
     const [activeTab, setActiveTab] = useState("my"); // "my" or "discover"
-    const [profile, setProfile] = useState(null);
-    const [myCircles, setMyCircles] = useState([]);
-    const [discoverCircles, setDiscoverCircles] = useState([]);
-    const [loading, setLoading] = useState(true);
 
     const [isJoiningCode, setIsJoiningCode] = useState(false);
     const [joinViaCode, setJoinViaCode] = useState("");
 
     useEffect(() => {
-        const fetchInitialData = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                loadUserData(session.user.id);
-            }
-        };
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            if (session) {
-                loadUserData(session.user.id);
-            }
-        });
-
-        fetchInitialData();
-        return () => subscription.unsubscribe();
-    }, []);
-
-    const loadUserData = async (userId) => {
-        try {
-            const { data: profileData } = await supabase
-                .from("users")
-                .select("id")
-                .eq("id", userId)
-                .single();
-
-            setProfile(profileData);
-            fetchMyCircles(userId);
-            fetchDiscoverCircles(userId);
-        } catch (err) {
-            console.error("Error loading user data:", err);
+        if (profile?.id) {
+            fetchMyCircles(profile.id);
+            fetchDiscoverCircles(profile.id);
         }
-    };
-
-    const fetchMyCircles = async (userId) => {
-        setLoading(true);
-        const { data, error } = await supabase
-            .from("study_circle_members")
-            .select(`
-                circle_id,
-                study_circles (*)
-            `)
-            .eq("user_id", userId);
-
-        if (error) {
-            setLoading(false);
-            return;
-        }
-
-        if (data) {
-            const formatted = await Promise.all(data.map(async (item) => {
-                const { count } = await supabase
-                    .from("study_circle_members")
-                    .select("*", { count: 'exact', head: true })
-                    .eq("circle_id", item.circle_id);
-
-                const circleInfo = Array.isArray(item.study_circles) ? item.study_circles[0] : item.study_circles;
-
-                if (!circleInfo) return null;
-
-                return {
-                    ...circleInfo,
-                    member_count: count || 0,
-                    unread: 0,
-                    last_message: circleInfo.last_message || "No messages yet",
-                    timestamp: circleInfo.last_message_at
-                        ? formatDate(circleInfo.last_message_at)
-                        : formatDate(circleInfo.created_at || new Date())
-                };
-            }));
-
-            const validCircles = formatted.filter(Boolean);
-            const sorted = validCircles.sort((a, b) => {
-                const dateA = new Date(a.last_message_at || a.created_at);
-                const dateB = new Date(b.last_message_at || b.created_at);
-                return dateB - dateA;
-            });
-
-            setMyCircles(sorted);
-        }
-        setLoading(false);
-    };
-
-    const fetchDiscoverCircles = async (userId) => {
-        const { data: joinedIds } = await supabase
-            .from("study_circle_members")
-            .select("circle_id")
-            .eq("user_id", userId);
-
-        const joinedIdList = joinedIds?.map(j => j.circle_id) || [];
-
-        let query = supabase.from("study_circles").select("*")
-            .eq("is_private", false);
-
-        if (joinedIdList.length > 0) {
-            query = query.not("id", "in", `(${joinedIdList.join(",")})`);
-        }
-
-        const { data, error } = await query;
-        if (error) return;
-
-        if (data) {
-            const formatted = await Promise.all(data.map(async (circle) => {
-                const { count } = await supabase
-                    .from("study_circle_members")
-                    .select("*", { count: 'exact', head: true })
-                    .eq("circle_id", circle.id);
-                return { ...circle, member_count: count || 0 };
-            }));
-            setDiscoverCircles(formatted);
-        }
-    };
+    }, [activeId, profile?.id, fetchMyCircles, fetchDiscoverCircles]);
 
     const handleJoinViaCode = async (e) => {
         e.preventDefault();
@@ -184,7 +85,10 @@ export default function StudyCircleSidebar({ activeId, isMobileVisible = true })
                 if (!joinError) {
                     showToast(`Joined ${data.name}!`, "success");
                     setJoinViaCode("");
-                    fetchMyCircles(profile.id);
+                    if (profile?.id) {
+                        fetchMyCircles(profile.id);
+                        fetchDiscoverCircles(profile.id);
+                    }
                     setActiveTab("my");
                     router.push(`/dashboard/study-circles/${data.id}`);
                 } else {

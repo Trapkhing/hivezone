@@ -4,6 +4,7 @@ import ScrollToTop from "@/components/dashboard/ScrollToTop";
 import ChatProvider from "@/components/providers/ChatProvider";
 import NotificationProvider from "@/components/providers/NotificationProvider";
 import { FeedProvider } from "@/components/providers/FeedProvider";
+import { StudyCirclesProvider } from "@/components/dashboard/StudyCirclesContext";
 import OneSignalInit from "@/components/OneSignalInit";
 import PWAInstall from "@/components/PWAInstall";
 
@@ -14,7 +15,8 @@ export default function DashboardLayout({ children }) {
         <QueryProvider>
             <NotificationProvider>
                 <FeedProvider>
-                    <ChatProvider>
+                    <StudyCirclesProvider>
+                        <ChatProvider>
                     <OneSignalInit />
                     <PWAInstall />
                     <div className="fixed inset-0 bg-[#fcf6de] text-zinc-900 font-sans flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
@@ -26,7 +28,8 @@ export default function DashboardLayout({ children }) {
                         <BottomNav />
                     </div>
                 </ChatProvider>
-            </FeedProvider>
+            </StudyCirclesProvider>
+        </FeedProvider>
         </NotificationProvider>
     </QueryProvider>
 );

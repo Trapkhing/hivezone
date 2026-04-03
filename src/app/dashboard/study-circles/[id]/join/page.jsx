@@ -13,12 +13,14 @@ import {
 } from "@hugeicons/core-free-icons";
 import Avatar from "@/components/ui/Avatar";
 import { useUI } from "@/components/ui/UIProvider";
+import { useStudyCircles } from "@/components/dashboard/StudyCirclesContext";
 
 export default function JoinCirclePage() {
     const { id: circleId } = useParams();
     const router = useRouter();
     const { showToast } = useUI();
     const supabase = createClient();
+    const { fetchMyCircles, fetchDiscoverCircles } = useStudyCircles();
 
     const [loading, setLoading] = useState(true);
     const [circle, setCircle] = useState(null);
@@ -86,6 +88,10 @@ export default function JoinCirclePage() {
 
         if (!error) {
             showToast(`Joined ${circle.name}!`, "success");
+            if (profile?.id) {
+                fetchMyCircles(profile.id);
+                fetchDiscoverCircles(profile.id);
+            }
             router.push(`/dashboard/study-circles/${circleId}`);
         } else {
             showToast("Failed to join circle", "error");
@@ -184,18 +190,18 @@ export default function JoinCirclePage() {
                             <button
                                 onClick={handleJoin}
                                 disabled={isJoining}
-                                className="w-full h-24 bg-black text-white rounded-full font-black text-3xl hover:bg-zinc-800 active:scale-95 transition-all shadow-2xl flex items-center justify-center gap-4 disabled:opacity-50 disabled:scale-100 relative group overflow-hidden"
+                                className="w-full h-16 bg-black text-white rounded-full font-black text-xl hover:bg-zinc-800 active:scale-95 transition-all shadow-2xl flex items-center justify-center gap-4 disabled:opacity-50 disabled:scale-100 relative group overflow-hidden"
                             >
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer" />
                                 {isJoining ? (
                                     <>
-                                        <div className="w-8 h-8 border-4 border-[#ffc107] border-t-transparent rounded-full animate-spin"></div>
-                                        <span>Joining Community...</span>
+                                        <div className="w-5 h-5 border-2 border-[#ffc107] border-t-transparent rounded-full animate-spin"></div>
+                                        <span>Joining...</span>
                                     </>
                                 ) : (
                                     <>
-                                        <HugeiconsIcon icon={UserGroupIcon} className="w-8 h-8 text-[#ffc107]" />
-                                        <span>Join this Circle</span>
+                                        <HugeiconsIcon icon={UserGroupIcon} className="w-5 h-5 text-[#ffc107]" />
+                                        <span>Join Circle</span>
                                     </>
                                 )}
                             </button>
