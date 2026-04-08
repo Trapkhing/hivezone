@@ -236,7 +236,7 @@ export default React.memo(function AutoPauseVideo({ src, className, onClick, ...
     return (
         <div
             ref={containerRef}
-            className={`w-full h-full relative group cursor-pointer flex items-center justify-center bg-black transition-all duration-300 ${isFullScreen ? 'fixed inset-0 z-[9999]' : 'rounded-[1.2rem] overflow-hidden'}`}
+            className={`w-full h-full relative group cursor-pointer flex items-center justify-center transition-all duration-300 ${isFullScreen ? 'fixed inset-0 z-[9999] bg-black' : 'rounded-[1.2rem] overflow-hidden bg-gray-100'}`}
             onClick={togglePlay}
             onMouseMove={resetControlsTimeout}
         >
@@ -251,14 +251,14 @@ export default React.memo(function AutoPauseVideo({ src, className, onClick, ...
                     onLoadedMetadata={handleLoadedMetadata}
                     onEnded={() => { exitFullScreen(); }}
                     loop
-                    className="w-full h-full object-contain relative z-20"
+                    className={`w-full h-full relative z-20 ${isFullScreen ? 'object-contain' : 'object-cover'}`}
                 />
             ) : (
                 posterUrl ? (
                     <img 
                         src={posterUrl} 
                         alt="Video thumbnail" 
-                        className="w-full h-full object-contain relative z-20" 
+                        className={`w-full h-full relative z-20 ${isFullScreen ? 'object-contain' : 'object-cover'}`}
                     />
                 ) : (
                    <div className="absolute inset-0 bg-gray-100 flex items-center justify-center z-10" />

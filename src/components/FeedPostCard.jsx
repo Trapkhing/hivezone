@@ -133,7 +133,7 @@ export default React.memo(function FeedPostCard({
                 </Link>
 
                 {post.media_url && (
-                    <div className="relative w-full aspect-[4/5] sm:aspect-square md:aspect-[4/5] rounded-[1.2rem] overflow-hidden mt-2 cursor-pointer group/img bg-black shadow-sm border border-gray-100/50 flex items-center justify-center">
+                    <div className="relative w-full aspect-[4/5] sm:aspect-square md:aspect-[4/5] rounded-[1.2rem] overflow-hidden mt-2 cursor-pointer group/img bg-gray-50 shadow-sm border border-gray-100/50 flex items-center justify-center">
                         {!isMediaLoaded && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 z-10 transition-opacity duration-300">
                                 <HugeiconsIcon icon={Image01Icon} className="w-8 h-8 text-gray-300" />
@@ -142,7 +142,6 @@ export default React.memo(function FeedPostCard({
                         {post.media_url.match(/\.(mp4|webm|ogg|mov|m4v|3gp|mkv)$/i) ? (
                             <AutoPauseVideo
                                 src={post.media_url}
-                                className="w-full h-full object-contain relative z-20"
                                 onClick={() => showImage(post.media_url)}
                             />
                         ) : (
@@ -159,7 +158,7 @@ export default React.memo(function FeedPostCard({
                                     }
                                 }}
                                 loading="lazy"
-                                className={`w-full h-full object-contain transition-all duration-700 bg-black group-hover/img:scale-[1.01] ${isMediaLoaded ? 'opacity-100 scale-100 blur-0 relative z-20' : 'opacity-0 scale-105 blur-xl absolute inset-0'}`}
+                                className={`w-full h-full object-cover transition-all duration-700 group-hover/img:scale-[1.02] ${isMediaLoaded ? 'opacity-100 scale-100 blur-0 relative z-20' : 'opacity-0 scale-105 blur-xl absolute inset-0'}`}
                             />
                         )}
                     </div>
