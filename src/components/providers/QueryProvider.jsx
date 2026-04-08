@@ -44,8 +44,13 @@ export function QueryProvider({ children }) {
                 maxAge: 1000 * 60 * 60 * 24, // 24 Hours
                 hydrateOptions: {
                     shouldDehydrateQuery: (query) => {
-                        // Persist the feed stream and profile for 0ms cold-starts
-                        return query.queryKey[0] === 'FEED_STREAM' || query.queryKey[0] === 'USER_PROFILE';
+                        return [
+                            'FEED_STREAM',
+                            'USER_PROFILE',
+                            'CONVERSATIONS',
+                            'GIGS_LIST',
+                            'STUDY_CIRCLES'
+                        ].includes(query.queryKey[0]);
                     }
                 }
             }}

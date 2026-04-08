@@ -3,6 +3,12 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { getDisplayName } from "@/utils/stringUtils";
+import {
+    saveConversationsToDisk,
+    getConversationsFromDisk,
+    saveMessagesToDisk,
+    getMessagesFromDisk
+} from "@/utils/chatStorage";
 
 const ChatContext = createContext({
     unreadCount: 0,
@@ -26,6 +32,16 @@ export default function ChatProvider({ children }) {
     const activeConversationRef = useRef(null);
     const supabase = createClient();
 
+    // Hydrate conversations from disk immediately on mount (0ms cold start)
+    useEffect(() => {
+        getConversationsFromDisk().then(cached => {
+            if (cached?.length > 0) {
+                setConversations(cached);
+                setLoadingConversations(false);
+            }
+        });
+    }, []);
+
     const setActiveConversation = useCallback((id) => {
         activeConversationRef.current = id;
         if (id) {
@@ -37,21 +53,18 @@ export default function ChatProvider({ children }) {
     }, []);
 
     const updateMessagesCache = useCallback((id, messages) => {
+        const limited = messages.slice(0, 70);
+        // Persist to IndexedDB so messages survive app restarts
+        saveMessagesToDisk(id, limited);
+
         setMessagesCache(prev => {
             const newCache = { ...prev };
-            
-            // Limit to last 70 messages (matching the fetch limit)
-            const limitedMessages = messages.slice(0, 70);
-            newCache[id] = limitedMessages;
-
-            // Limit cache to 5 conversations total
+            newCache[id] = limited;
             const keys = Object.keys(newCache);
             if (keys.length > 5) {
-                // Remove the oldest conversation that isn't the active one
                 const oldestKey = keys.find(k => k !== id && k !== activeConversationRef.current) || keys[0];
                 delete newCache[oldestKey];
             }
-
             return newCache;
         });
     }, []);
@@ -87,6 +100,8 @@ export default function ChatProvider({ children }) {
                 };
             });
             setConversations(formatted);
+            // Persist to IndexedDB so sidebar loads instantly on next open
+            saveConversationsToDisk(formatted);
         }
         setLoadingConversations(false);
     };

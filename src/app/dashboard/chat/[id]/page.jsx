@@ -30,6 +30,7 @@ import Linkify from "@/components/ui/Linkify";
 import UserBadge from "@/components/ui/UserBadge";
 import { compressForChat } from "@/utils/compressImage";
 import AutoPauseVideo from "@/components/ui/AutoPauseVideo";
+import { getMessagesFromDisk } from "@/utils/chatStorage";
 
 const downloadFile = async (url, fallbackName = 'attachment') => {
     try {
@@ -85,6 +86,18 @@ export default function ChatWindowPage() {
     const [loadingMore, setLoadingMore] = useState(false);
     const offsetRef = useRef(0);
     const limit = 70;
+
+    // Hydrate messages from IndexedDB on mount — shows messages instantly before network
+    useEffect(() => {
+        if (messagesCache[id]) return; // already in memory, skip disk read
+        getMessagesFromDisk(id).then(cached => {
+            if (cached?.length > 0) {
+                setMessages(cached);
+                setHasMore(cached.length >= limit);
+                offsetRef.current = cached.length;
+            }
+        });
+    }, [id]);
 
     // Helper to mark messages as read
     const markAsRead = async () => {

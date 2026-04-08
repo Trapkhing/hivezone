@@ -1,5 +1,8 @@
+import withPWA from '@ducanh2912/next-pwa';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  turbopack: {},
   images: {
     remotePatterns: [
       {
@@ -12,10 +15,16 @@ const nextConfig = {
       },
     ],
   },
-  // Allow Capacitor (running on local IP) to connect to Next.js HMR for live reload
   allowedDevOrigins: ["10.217.45.102", "localhost", "10.0.2.2"],
 };
 
-
-
-export default nextConfig;
+export default withPWA({
+  dest: 'public',
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: false,
+  disable: process.env.NODE_ENV === 'development',
+  workboxOptions: {
+    disableDevLogs: true,
+  }
+})(nextConfig);
