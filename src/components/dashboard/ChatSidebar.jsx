@@ -28,28 +28,26 @@ export default function ChatSidebar({ activeId }) {
 
     return (
         <div className="w-full md:w-[350px] lg:w-[400px] flex flex-col border-r border-gray-100 h-full bg-white shrink-0">
-            {/* Sidebar Header */}
-            <div className="p-6 pb-2">
-                <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-2xl font-black font-newyork text-gray-900 tracking-tight">Messages</h1>
+            {/* Single scrollable container — header scrolls with list */}
+            <div className="flex-1 overflow-y-auto pb-20 md:pb-4">
+                {/* Header */}
+                <div className="p-6 pb-2">
+                    <h1 className="text-2xl font-black font-newyork text-gray-900 tracking-tight mb-6">Messages</h1>
+                    <div className="relative mb-4">
+                        <HugeiconsIcon icon={Search01Icon} size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Search messages"
+                            className="w-full bg-gray-50 border-none rounded-2xl py-3 pl-12 pr-4 text-sm outline-none focus:ring-2 focus:ring-[#ffc107]/20 transition-all"
+                        />
+                    </div>
                 </div>
 
-                {/* Search Bar */}
-                <div className="relative mb-4">
-                    <HugeiconsIcon icon={Search01Icon} size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search messages"
-                        className="w-full bg-gray-50 border-none rounded-2xl py-3 pl-12 pr-4 text-sm outline-none focus:ring-2 focus:ring-[#ffc107]/20 transition-all"
-                    />
-                </div>
-            </div>
-
-            {/* Conversations List */}
-            <div className="flex-1 overflow-y-auto px-2 pb-4 md:pb-4 pb-20">
-                {loadingConversations ? (
+                {/* Conversations List */}
+                <div className="px-2">
+                    {loadingConversations ? (
                     <div className="flex flex-col">
                         {[...Array(5)].map((_, i) => <ConversationSkeleton key={i} />)}
                     </div>
@@ -62,8 +60,7 @@ export default function ChatSidebar({ activeId }) {
                         <Link
                             key={chat.id}
                             href={`/dashboard/chat/${chat.id}`}
-                            className={`flex items-center gap-4 p-4 rounded-[2rem] transition-all group active:scale-[0.98] ${activeId === chat.id ? 'bg-[#ffc107]/10' : 'hover:bg-gray-50'
-                                }`}
+                            className={`flex items-center gap-4 p-4 rounded-[2rem] transition-all group active:scale-[0.98] ${activeId === chat.id ? 'bg-[#ffc107]/10' : 'hover:bg-gray-50'}`}
                         >
                             <div className="shrink-0">
                                 <Avatar
@@ -78,9 +75,9 @@ export default function ChatSidebar({ activeId }) {
                                         <h3 className={`text-[15px] truncate font-extrabold ${chat.unreadCount > 0 ? 'text-black' : (activeId === chat.id ? 'text-gray-900' : 'text-gray-800')}`}>
                                             {chat.otherUser.computedName}
                                         </h3>
-                                        <UserBadge 
-                                            isAdmin={chat.otherUser.is_admin} 
-                                            isVerified={chat.otherUser.is_verified} 
+                                        <UserBadge
+                                            isAdmin={chat.otherUser.is_admin}
+                                            isVerified={chat.otherUser.is_verified}
                                             size="sm"
                                         />
                                     </div>
@@ -107,9 +104,7 @@ export default function ChatSidebar({ activeId }) {
                                                     message: "Are you sure you want to hide this conversation? It will reappear if they send a new message.",
                                                     confirmText: "Yes, hide it",
                                                     cancelText: "Cancel",
-                                                    onConfirm: async () => {
-                                                        await hideConversation(chat.id);
-                                                    }
+                                                    onConfirm: async () => { await hideConversation(chat.id); }
                                                 });
                                             }}
                                             className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 z-10 shrink-0"
@@ -117,7 +112,6 @@ export default function ChatSidebar({ activeId }) {
                                         >
                                             <HugeiconsIcon icon={Delete01Icon} size={16} />
                                         </button>
-
                                         {chat.unreadCount > 0 && (
                                             <span className="w-5 h-5 min-w-[20px] bg-[#ffc107] text-black text-[10px] font-black rounded-full flex items-center justify-center shrink-0">
                                                 {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
@@ -129,6 +123,7 @@ export default function ChatSidebar({ activeId }) {
                         </Link>
                     ))
                 )}
+                </div>
             </div>
         </div>
     );
