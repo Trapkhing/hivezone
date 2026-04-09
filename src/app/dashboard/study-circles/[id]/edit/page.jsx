@@ -14,7 +14,8 @@ import {
     Delete02Icon,
     LicenseIcon,
     Copy01Icon,
-    SentIcon
+    SentIcon,
+    RefreshIcon
 } from "@hugeicons/core-free-icons";
 import { createClient } from "@/utils/supabase/client";
 import { useUI } from "@/components/ui/UIProvider";
@@ -89,6 +90,21 @@ export default function EditCirclePage({ params }) {
         loadCircle();
     }, [id, router, supabase, showToast]);
 
+    const generateInviteCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    const handlePrivacyToggle = (isPrivate) => {
+        setFormData(prev => ({
+            ...prev,
+            is_private: isPrivate,
+            // Auto-generate invite code when switching to private and none exists
+            invite_code: isPrivate && !prev.invite_code ? generateInviteCode() : prev.invite_code
+        }));
+    };
+
+    const handleRegenerateCode = () => {
+        setFormData(prev => ({ ...prev, invite_code: generateInviteCode() }));
+    };
+
     const handleUpdate = async (e) => {
         e.preventDefault();
         if (!formData.name.trim() || !profile) return;
@@ -134,7 +150,8 @@ export default function EditCirclePage({ params }) {
                 course: formData.course,
                 description: formData.description,
                 is_private: formData.is_private,
-                avatar_url: updatedAvatarUrl
+                avatar_url: updatedAvatarUrl,
+                invite_code: formData.is_private ? formData.invite_code : null
             })
             .eq("id", id);
 
@@ -270,7 +287,7 @@ export default function EditCirclePage({ params }) {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <button
                                         type="button"
-                                        onClick={() => setFormData({ ...formData, is_private: false })}
+                                        onClick={() => handlePrivacyToggle(false)}
                                         className={`flex items-center gap-4 p-5 rounded-[2rem] border-2 transition-all relative overflow-hidden group ${!formData.is_private ? 'border-[#ffc107] bg-amber-50/30' : 'border-gray-50 bg-gray-50/50 hover:border-gray-200'}`}
                                     >
                                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${!formData.is_private ? 'bg-[#ffc107] text-white shadow-lg shadow-amber-200' : 'bg-white text-gray-400 shadow-sm'}`}>
@@ -285,7 +302,7 @@ export default function EditCirclePage({ params }) {
 
                                     <button
                                         type="button"
-                                        onClick={() => setFormData({ ...formData, is_private: true })}
+                                        onClick={() => handlePrivacyToggle(true)}
                                         className={`flex items-center gap-4 p-5 rounded-[2rem] border-2 transition-all relative overflow-hidden group ${formData.is_private ? 'border-zinc-900 bg-zinc-50' : 'border-gray-50 bg-gray-50/50 hover:border-gray-200'}`}
                                     >
                                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${formData.is_private ? 'bg-zinc-900 text-white shadow-lg' : 'bg-white text-gray-400 shadow-sm'}`}>
@@ -318,6 +335,14 @@ export default function EditCirclePage({ params }) {
                                             className="w-14 h-14 bg-white/10 hover:bg-white/20 rounded-2xl flex items-center justify-center transition-all active:scale-95"
                                         >
                                             <HugeiconsIcon icon={copied ? Tick01Icon : Copy01Icon} className={`w-6 h-6 ${copied ? 'text-[#ffc107]' : 'text-white'}`} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleRegenerateCode}
+                                            className="w-14 h-14 bg-white/10 hover:bg-white/20 rounded-2xl flex items-center justify-center transition-all active:scale-95"
+                                            title="Generate new code"
+                                        >
+                                            <HugeiconsIcon icon={RefreshIcon} className="w-6 h-6 text-white" />
                                         </button>
                                     </div>
                                     <p className="text-[11px] font-bold text-gray-400 ml-1 italic">* This code is required for anyone who wishes to join your private circle.</p>

@@ -18,12 +18,15 @@ import {
 import Link from "next/link";
 import Avatar from "@/components/ui/Avatar";
 import { createClient } from "@/utils/supabase/client";
+import { useUI } from "@/components/ui/UIProvider";
 
 export default function GroupInfoDrawer({ isOpen, onClose, circle, profile, onLeave }) {
     const supabase = createClient();
+    const { showImage } = useUI();
     const [members, setMembers] = useState([]);
+    const [mediaUrls, setMediaUrls] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState("members"); // members, media, docs
+    const [activeTab, setActiveTab] = useState("members");
     const [copied, setCopied] = useState(false);
 
     useEffect(() => {
@@ -31,6 +34,30 @@ export default function GroupInfoDrawer({ isOpen, onClose, circle, profile, onLe
             fetchMembers();
         }
     }, [isOpen, circle?.id]);
+
+    useEffect(() => {
+        if (isOpen && circle?.id && activeTab === 'media') {
+            fetchMedia();
+        }
+    }, [isOpen, circle?.id, activeTab]);
+
+    const fetchMedia = async () => {
+        setLoading(true);
+        const { data, error } = await supabase
+            .from('study_circle_messages')
+            .select('attachment_url')
+            .eq('circle_id', circle.id)
+            .not('attachment_url', 'is', null);
+
+        if (!error && data) {
+            const allUrls = data.flatMap(m => m.attachment_url.split(','));
+            const media = allUrls.filter(url =>
+                url.match(/\.(jpeg|jpg|gif|png|webp|mp4|webm|ogg|mov|m4v|3gp|mkv)(\?.*)?$/i) || url.startsWith('blob:')
+            );
+            setMediaUrls(media);
+        }
+        setLoading(false);
+    };
 
     const fetchMembers = async () => {
         setLoading(true);
@@ -167,9 +194,38 @@ export default function GroupInfoDrawer({ isOpen, onClose, circle, profile, onLe
                         )}
 
                         {activeTab === "media" && (
-                            <div className="flex flex-col items-center justify-center p-12 text-center opacity-30">
-                                <HugeiconsIcon icon={Image01Icon} className="w-12 h-12 mb-2" />
-                                <p className="font-bold text-sm">No media shared yet</p>
+                            <div className="space-y-4">
+                                {loading ? (
+                                    <div className="flex justify-center p-8">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+                                    </div>
+                                ) : members.length > 0 ? (
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {mediaUrls.map((url, i) => {
+                                            const isVideo = url.match(/\.(mp4|webm|ogg|mov|m4v|3gp|mkv)(\?.*)?$/i);
+                                            return (
+                                                <div
+                                                    key={i}
+                                                    className="relative aspect-square rounded-lg overflow-hidden border border-gray-100 cursor-pointer hover:opacity-90 transition-opacity bg-gray-50"
+                                                    onClick={() => !isVideo && showImage(url)}
+                                                >
+                                                    {isVideo ? (
+                                                        <div className="flex items-center justify-center w-full h-full bg-gray-100">
+                                                            <div className="w-0 h-0 border-t-[8px] border-t-transparent border-l-[16px] border-l-gray-400 border-b-[8px] border-b-transparent ml-1" />
+                                                        </div>
+                                                    ) : (
+                                                        <img src={url} alt={`Media ${i}`} className="w-full h-full object-cover" />
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center p-12 text-center opacity-30">
+                                        <HugeiconsIcon icon={Image01Icon} className="w-12 h-12 mb-2" />
+                                        <p className="font-bold text-sm">No media shared yet</p>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

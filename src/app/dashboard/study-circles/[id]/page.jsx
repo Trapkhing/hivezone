@@ -18,7 +18,8 @@ import {
     Download01Icon,
     ArrowMoveUpLeftIcon,
     Settings02Icon,
-    Delete01Icon
+    Delete01Icon,
+    Image01Icon
 } from "@hugeicons/core-free-icons";
 import Avatar from "@/components/ui/Avatar";
 import { useUI } from "@/components/ui/UIProvider";
@@ -27,6 +28,7 @@ import GroupInfoDrawer from "@/components/dashboard/GroupInfoDrawer";
 import Linkify from "@/components/ui/Linkify";
 import { compressForChat } from "@/utils/compressImage";
 import AutoPauseVideo from "@/components/ui/AutoPauseVideo";
+import { downloadOrShareFile } from "@/utils/fileDownload";
 
 const formatDate = (date) => {
     return new Intl.DateTimeFormat("en-US", {
@@ -36,37 +38,10 @@ const formatDate = (date) => {
     }).format(new Date(date));
 };
 
-const downloadFile = async (url, fallbackName = 'attachment') => {
-    try {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        const blobUrl = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-
-        let filename = fallbackName;
-        try {
-            const urlObj = new URL(url);
-            const pathParts = urlObj.pathname.split('/');
-            const lastPart = pathParts[pathParts.length - 1];
-            if (lastPart) filename = decodeURIComponent(lastPart);
-        } catch (e) { }
-
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(blobUrl);
-    } catch (error) {
-        console.error('Download failed:', error);
-        window.open(url, '_blank', 'noopener,noreferrer');
-    }
-};
-
 export default function StudyCircleDetailPage() {
     const { id: circleId } = useParams();
     const { showToast, confirmAction, showImage } = useUI();
-    const { handleLeaveCircle: contextLeaveCircle } = useStudyCircles();
+    const { handleLeaveCircle: contextLeaveCircle, markCircleAsRead } = useStudyCircles();
     const supabase = createClient();
     const router = useRouter();
 
@@ -85,14 +60,12 @@ export default function StudyCircleDetailPage() {
     const [attachmentPreviews, setAttachmentPreviews] = useState([]);
     const [isSending, setIsSending] = useState(false);
 
-    const messagesEndRef = useRef(null);
+    const scrollRef = useRef(null);
     const fileInputRef = useRef(null);
+    const isFirstLoad = useRef(true);
     const menuRef = useRef(null);
     const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
+    const [typingUsers, setTypingUsers] = useState([]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -181,6 +154,12 @@ export default function StudyCircleDetailPage() {
             .eq("circle_id", circleId);
 
         setCircleData({ ...circle, member_count: count || 0 });
+        // Mark as read directly — bypass context to avoid async profile dependency
+        await supabase
+            .from('study_circle_members')
+            .update({ last_read_at: new Date().toISOString() })
+            .eq('circle_id', circleId)
+            .eq('user_id', userId);
         await fetchMessages();
         setLoading(false);
     };
@@ -188,15 +167,13 @@ export default function StudyCircleDetailPage() {
     const fetchMessages = async () => {
         const { data, error } = await supabase
             .from("study_circle_messages")
-            .select(`
-                *,
-                author:users (display_name, profile_picture)
-            `)
+            .select(`*, author:users (display_name, profile_picture)`)
             .eq("circle_id", circleId)
-            .order("created_at", { ascending: true });
+            .order("created_at", { ascending: false })
+            .limit(70);
 
-        if (!error) {
-            setMessages(data.map(m => ({
+        if (!error && data) {
+            const formatted = data.map(m => ({
                 id: m.id,
                 sender: m.author?.display_name || "Unknown",
                 text: m.content,
@@ -206,17 +183,23 @@ export default function StudyCircleDetailPage() {
                 avatar: m.author?.profile_picture,
                 user_id: m.user_id,
                 reply_to_id: m.reply_to_id,
-                reply_to: data.find(parent => parent.id === m.reply_to_id) ? {
-                    sender: data.find(parent => parent.id === m.reply_to_id).author?.display_name || "Unknown",
-                    text: data.find(parent => parent.id === m.reply_to_id).content
+                reply_to: data.find(p => p.id === m.reply_to_id) ? {
+                    sender: data.find(p => p.id === m.reply_to_id).author?.display_name || 'Unknown',
+                    text: data.find(p => p.id === m.reply_to_id).content
                 } : null
-            })));
-            setTimeout(scrollToBottom, 100);
+            }));
+            setMessages(formatted);
+            if (isFirstLoad.current) {
+                requestAnimationFrame(() => {
+                    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+                    isFirstLoad.current = false;
+                });
+            }
         }
     };
 
     // Realtime subscription & Presence
-    const [typingUsers, setTypingUsers] = useState([]);
+    const channelRef = useRef(null);
     const typingTimeoutRef = useRef(null);
 
     useEffect(() => {
@@ -236,52 +219,47 @@ export default function StudyCircleDetailPage() {
                 schema: 'public',
                 table: 'study_circle_messages',
                 filter: `circle_id=eq.${circleId}`
-            }, async (payload) => {
-                const { data: authorData } = await supabase
-                    .from("users")
-                    .select("display_name, profile_picture")
-                    .eq("id", payload.new.user_id)
-                    .single();
+            }, (payload) => {
+                const newRow = payload.new;
+                if (!newRow) return;
 
-                const newMsg = {
-                    id: payload.new.id,
-                    sender: authorData?.display_name || "Unknown",
-                    text: payload.new.content,
-                    attachment: payload.new.attachment_url,
-                    timestamp: formatDate(payload.new.created_at),
-                    created_at_raw: payload.new.created_at,
-                    avatar: authorData?.profile_picture,
-                    user_id: payload.new.user_id,
-                    reply_to_id: payload.new.reply_to_id,
-                    reply_to: null // We'll handle parent lookup if needed or just skip for real-time for now
-                };
+                setMessages(prev => {
+                    if (prev.find(m => m.id === newRow.id)) return prev;
 
-                // Simple parent lookup if it's a reply
-                if (newMsg.reply_to_id) {
-                    setMessages(prev => {
-                        const parent = prev.find(m => m.id === newMsg.reply_to_id);
-                        if (parent) {
-                            newMsg.reply_to = {
-                                sender: parent.sender,
-                                text: parent.text
-                            };
-                        }
+                    const parent = prev.find(m => m.id === newRow.reply_to_id);
+                    const formatted = {
+                        id: newRow.id,
+                        sender: prev.find(m => m.user_id === newRow.user_id)?.sender || profile?.display_name || 'Unknown',
+                        text: newRow.content,
+                        attachment: newRow.attachment_url,
+                        timestamp: formatDate(newRow.created_at),
+                        created_at_raw: newRow.created_at,
+                        avatar: prev.find(m => m.user_id === newRow.user_id)?.avatar || profile?.profile_picture,
+                        user_id: newRow.user_id,
+                        reply_to_id: newRow.reply_to_id,
+                        reply_to: parent ? { sender: parent.sender, text: parent.text } : null
+                    };
 
-                        if (prev.some(m => m.id === newMsg.id || (m.text === newMsg.text && m.user_id === newMsg.user_id && m.id?.toString().startsWith('temp-')))) {
-                            return prev.map(m => (m.text === newMsg.text && m.user_id === newMsg.user_id) ? newMsg : m);
-                        }
-                        return [...prev, newMsg];
-                    });
-                } else {
-                    setMessages(prev => {
-                        if (prev.some(m => m.id === newMsg.id || (m.text === newMsg.text && m.user_id === newMsg.user_id && m.id?.toString().startsWith('temp-')))) {
-                            return prev.map(m => (m.text === newMsg.text && m.user_id === newMsg.user_id) ? newMsg : m);
-                        }
-                        return [...prev, newMsg];
-                    });
+                    const optimisticMatch = prev.find(m =>
+                        m.id?.toString().startsWith('temp-') &&
+                        m.user_id === newRow.user_id &&
+                        (m.text === newRow.content || (!m.text && !newRow.content && m.attachment))
+                    );
+
+                    if (optimisticMatch) return prev.map(m => m.id === optimisticMatch.id ? formatted : m);
+                    return [...prev, formatted];
+                });
+                // Mark as read directly since we're actively viewing
+                if (profile?.id) {
+                    supabase
+                        .from('study_circle_members')
+                        .update({ last_read_at: new Date().toISOString() })
+                        .eq('circle_id', circleId)
+                        .eq('user_id', profile.id)
+                        .then(() => {
+                            markCircleAsRead(circleId, profile.id);
+                        });
                 }
-
-                setTimeout(scrollToBottom, 300);
             })
             .on('presence', { event: 'sync' }, () => {
                 const state = channel.presenceState();
@@ -303,6 +281,7 @@ export default function StudyCircleDetailPage() {
             })
             .subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
+                    channelRef.current = channel;
                     await channel.track({
                         display_name: profile.display_name,
                         is_typing: false
@@ -316,21 +295,11 @@ export default function StudyCircleDetailPage() {
     }, [circleId, profile, supabase]);
 
     const handleTyping = async () => {
-        if (!circleId || !profile) return;
-
-        const channel = supabase.channel(`circle-${circleId}`);
-        await channel.track({
-            display_name: profile.display_name,
-            is_typing: true
-        });
-
+        if (!channelRef.current || !profile) return;
+        await channelRef.current.track({ display_name: profile.display_name, is_typing: true });
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-
         typingTimeoutRef.current = setTimeout(async () => {
-            await channel.track({
-                display_name: profile.display_name,
-                is_typing: false
-            });
+            await channelRef.current?.track({ display_name: profile.display_name, is_typing: false });
         }, 3000);
     };
 
@@ -355,7 +324,7 @@ export default function StudyCircleDetailPage() {
             } : null
         };
 
-        setMessages(prev => [...prev, tempMessage]);
+        setMessages(prev => [tempMessage, ...prev]);
 
         const msgText = newMessage.trim();
         const msgAttachmentFiles = [...selectedAttachments];
@@ -365,7 +334,6 @@ export default function StudyCircleDetailPage() {
         setSelectedAttachments([]);
         setAttachmentPreviews([]);
         setReplyingTo(null);
-        setTimeout(scrollToBottom, 100);
 
         let urls = [];
 
@@ -373,8 +341,8 @@ export default function StudyCircleDetailPage() {
             const uploadPromises = msgAttachmentFiles.map(async (file, index) => {
                 // Compress images before upload
                 const fileToUpload = await compressForChat(file);
-                const fileExt = fileToUpload.name.split('.').pop();
-                const fileName = `study-circle-attachments/${profile.id}-${Date.now()}-${index}.${fileExt}`;
+                const originalName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                const fileName = `study-circle-attachments/${Date.now()}--${originalName}`;
 
                 // 1. Get presigned URL from our API
                 const response = await fetch("/api/upload", {
@@ -428,6 +396,35 @@ export default function StudyCircleDetailPage() {
         if (error) {
             showToast("Failed to send message", "error");
             setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
+        } else {
+            // Update last_message and last_message_at on the circle
+            await supabase
+                .from('study_circles')
+                .update({
+                    last_message: msgText || (url ? 'Sent an attachment' : ''),
+                    last_message_at: new Date().toISOString()
+                })
+                .eq('id', circleId);
+
+            // Push notification to all other members
+            const { data: members } = await supabase
+                .from('study_circle_members')
+                .select('user_id')
+                .eq('circle_id', circleId)
+                .neq('user_id', profile.id);
+
+            if (members?.length > 0) {
+                fetch('/api/notifications/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userIds: members.map(m => m.user_id),
+                        title: `${circleData?.name || 'Study Circle'}`,
+                        message: `${profile.display_name || 'Someone'}: ${msgText || 'Sent an attachment'}`,
+                        url: `${window.location.origin}/dashboard/study-circles/${circleId}`
+                    })
+                }).catch(err => console.error('Circle push notification failed:', err));
+            }
         }
     };
 
@@ -461,7 +458,8 @@ export default function StudyCircleDetailPage() {
                     .from('study_circle_messages')
                     .delete()
                     .eq('id', msgId)
-                    .eq('user_id', profile.id);
+                    .eq(profile?.id === circleData?.created_by ? 'circle_id' : 'user_id',
+                       profile?.id === circleData?.created_by ? circleId : profile.id);
 
                 if (error) {
                     console.error("Error deleting message:", error);
@@ -495,7 +493,7 @@ export default function StudyCircleDetailPage() {
             message: "Are you sure you want to leave?",
             confirmText: "Leave",
             cancelText: "Stay",
-            action: async () => {
+            onConfirm: async () => {
                 await contextLeaveCircle(circleId);
                 router.push('/dashboard/study-circles');
             }
@@ -584,76 +582,79 @@ export default function StudyCircleDetailPage() {
             </div>
 
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar bg-gray-50/30 pb-32 md:pb-10">
+            <div
+                ref={scrollRef}
+                className="flex-1 overflow-y-auto bg-gray-50/30 flex flex-col-reverse gap-0 pb-4"
+                style={{ overflowAnchor: 'none' }}
+            >
                 {messages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center opacity-30 mt-10">
+                    <div className="flex flex-col items-center justify-center h-full text-center opacity-30 mt-10 order-first">
                         <HugeiconsIcon icon={InformationCircleIcon} className="w-12 h-12 mb-2" />
                         <p className="font-bold">No messages yet. Start the conversation!</p>
                     </div>
                 ) : (
-                    (() => {
-                        const grouped = messages.reduce((acc, msg) => {
-                            const dateStr = new Date(msg.created_at_raw || new Date()).toDateString();
-                            if (!acc[dateStr]) acc[dateStr] = [];
-                            acc[dateStr].push(msg);
-                            return acc;
-                        }, {});
+                    <div className="px-4 md:px-6 flex flex-col-reverse gap-4 py-4">
+                        {(() => {
+                            const items = [];
+                            messages.forEach((msg, idx) => {
+                                const msgDate = new Date(msg.created_at_raw || new Date()).toDateString();
+                                items.push({ type: 'message', data: msg, key: msg.id || `msg-${idx}` });
+                                const nextMsg = messages[idx + 1];
+                                const nextDate = nextMsg ? new Date(nextMsg.created_at_raw || new Date()).toDateString() : null;
+                                if (msgDate !== nextDate) {
+                                    items.push({ type: 'date-header', label: msgDate, key: `date-${msgDate}` });
+                                }
+                            });
 
-                        return Object.entries(grouped).map(([dateStr, dayMessages]) => {
-                            const date = new Date(dateStr);
-                            const today = new Date();
-                            const yesterday = new Date();
-                            yesterday.setDate(today.getDate() - 1);
+                            return items.map((item) => {
+                                if (item.type === 'date-header') {
+                                    const date = new Date(item.label);
+                                    const today = new Date();
+                                    const yesterday = new Date();
+                                    yesterday.setDate(today.getDate() - 1);
+                                    const isSameDay = (d1, d2) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+                                    let dateLabel = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                                    if (isSameDay(date, today)) dateLabel = 'Today';
+                                    else if (isSameDay(date, yesterday)) dateLabel = 'Yesterday';
+                                    return (
+                                        <div key={item.key} className="flex justify-center py-2 pointer-events-none">
+                                            <span className="bg-white/95 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-gray-500 uppercase tracking-widest shadow-md border border-gray-100">{dateLabel}</span>
+                                        </div>
+                                    );
+                                }
 
-                            let dateLabel = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                                const msg = item.data;
+                                const isAdmin = profile?.id === circleData?.created_by;
+                                const isMe = msg.user_id === profile?.id;
+                                const isTemp = msg.id?.toString().startsWith('temp-');
+                                const msgAgeMs = new Date() - new Date(msg.created_at_raw);
+                                const canDelete = !isTemp && (isAdmin || (isMe && msgAgeMs < 30 * 60 * 1000));
 
-                            const isSameDay = (d1, d2) =>
-                                d1.getFullYear() === d2.getFullYear() &&
-                                d1.getMonth() === d2.getMonth() &&
-                                d1.getDate() === d2.getDate();
-
-                            if (isSameDay(date, today)) dateLabel = "Today";
-                            else if (isSameDay(date, yesterday)) dateLabel = "Yesterday";
-
-                            return (
-                                <div key={dateStr} className="w-full">
-                                    <div className="sticky top-0 z-20 flex justify-center py-4 pointer-events-none">
-                                        <span className="bg-white/95 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-gray-500 uppercase tracking-widest shadow-md border border-gray-100 pointer-events-auto">
-                                            {dateLabel}
-                                        </span>
-                                    </div>
-                                    <div className="px-4 md:px-6 space-y-4 pb-8">
-                                        {dayMessages.map((msg, idx) => {
-                                            const isMe = msg.user_id === profile?.id;
-                                            const isTemp = msg.id?.toString().startsWith('temp-');
-                                            const msgAgeMs = new Date() - new Date(msg.created_at_raw);
-                                            const canDelete = isMe && !isTemp && (msgAgeMs < 30 * 60 * 1000);
-
-                                            return (
-                                                <div key={msg.id || idx} className={`flex group ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                                    <div className={`flex items-center gap-2 max-w-[85%] ${isMe ? 'flex-row-reverse' : ''}`}>
-                                                        {canDelete && (
-                                                            <button
-                                                                onClick={() => handleDeleteMessage(msg.id)}
-                                                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-100 md:opacity-0 group-hover:opacity-100 shrink-0"
-                                                                title="Delete message"
-                                                            >
-                                                                <HugeiconsIcon icon={Delete01Icon} size={16} />
-                                                            </button>
-                                                        )}
-                                                        <div className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
-                                                            {!isMe && (
-                                                                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 mt-1">
-                                                                    <Avatar src={msg.avatar} name={msg.sender} className="w-full h-full" />
-                                                                </div>
-                                                            )}
-                                                            <div className="flex flex-col">
-                                                                <div className={`flex items-center gap-2 mb-1 ${isMe ? 'justify-end' : ''}`}>
-                                                                    {!isMe && (
-                                                                        <span className="text-[11px] font-bold text-gray-500">{msg.sender}</span>
-                                                                    )}
-                                                                    <span className="text-[10px] text-gray-400">{msg.timestamp}</span>
-                                                                </div>
+                                return (
+                                    <div key={item.key} className={`flex group ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`flex items-center gap-2 max-w-[85%] ${isMe ? 'flex-row-reverse' : ''}`}>
+                                        {canDelete && (
+                                            <button
+                                                onClick={() => handleDeleteMessage(msg.id)}
+                                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-100 md:opacity-0 group-hover:opacity-100 shrink-0"
+                                                title="Delete message"
+                                            >
+                                                <HugeiconsIcon icon={Delete01Icon} size={16} />
+                                            </button>
+                                        )}
+                                        <div className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
+                                            {!isMe && (
+                                                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 mt-1">
+                                                    <Avatar src={msg.avatar} name={msg.sender} className="w-full h-full" />
+                                                </div>
+                                            )}
+                                            <div className="flex flex-col">
+                                                <div className={`flex items-center gap-2 mb-1 ${isMe ? 'justify-end' : ''}`}>
+                                                    {!isMe && (
+                                                        <span className="text-[11px] font-bold text-gray-500">{msg.sender}</span>
+                                                    )}
+                                                    <span className="text-[10px] text-gray-400">{msg.timestamp}</span>
+                                                </div>
                                                                 <motion.div
                                                                     drag="x"
                                                                     dragConstraints={{ left: 0, right: 80 }}
@@ -719,7 +720,7 @@ export default function StudyCircleDetailPage() {
                                                                                 {docs.length > 0 && docs.map((url, i) => (
                                                                                     <div
                                                                                         key={i}
-                                                                                        onClick={() => downloadFile(url, `attachment-${msg.id}-${i}`)}
+                                                                                        onClick={() => downloadOrShareFile(url, `attachment-${msg.id}-${i}`)}
                                                                                         className={`flex items-center justify-between gap-3 p-3 rounded-xl border border-black/5 cursor-pointer hover:opacity-90 transition-opacity mt-1 bg-black/5`}
                                                                                     >
                                                                                         <div className="flex items-center gap-3 overflow-hidden">
@@ -733,8 +734,10 @@ export default function StudyCircleDetailPage() {
                                                                                                             const urlObj = new URL(url);
                                                                                                             const pathParts = urlObj.pathname.split('/');
                                                                                                             const lastPart = pathParts[pathParts.length - 1];
-                                                                                                            const cleanName = decodeURIComponent(lastPart).replace(/^[^-]+-\d+\./, '');
-                                                                                                            return cleanName || 'Document';
+                                                                                                            const raw = decodeURIComponent(lastPart);
+                                                                                                            const clean = raw.includes('--') ? raw.split('--').slice(1).join('--') : raw;
+                                                                                                            const isUUID = /^[0-9a-f-]{36}$/i.test(clean);
+                                                                                                            return (clean && !isUUID) ? clean : 'Document';
                                                                                                         } catch (e) {
                                                                                                             return 'Document';
                                                                                                         }
@@ -752,20 +755,16 @@ export default function StudyCircleDetailPage() {
                                                                         text={msg.text}
                                                                         className={`whitespace-pre-wrap ${isMe ? 'text-black [&_a]:text-black [&_a]:underline' : ''}`}
                                                                     />
-                                                                </motion.div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                                </motion.div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             );
-                        });
-                    })()
+                            });
+                        })()}
+                    </div>
                 )}
-                <div ref={messagesEndRef} />
             </div>
 
             {/* Input Area */}
@@ -833,9 +832,22 @@ export default function StudyCircleDetailPage() {
                         onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); } }}
                     />
                     <div className="flex gap-1 pb-1">
-                        <input type="file" multiple ref={fileInputRef} onChange={handleAttachmentSelect} className="hidden" />
+                        <input type="file" multiple ref={fileInputRef} onChange={handleAttachmentSelect} className="hidden" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.zip" />
                         <button type="button" onClick={() => fileInputRef.current.click()} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500">
                             <HugeiconsIcon icon={Attachment01Icon} className="w-5 h-5" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                fileInputRef.current.accept = 'image/*,video/*';
+                                fileInputRef.current.click();
+                                setTimeout(() => {
+                                    if (fileInputRef.current) fileInputRef.current.accept = 'image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.zip';
+                                }, 1000);
+                            }}
+                            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500"
+                        >
+                            <HugeiconsIcon icon={Image01Icon} className="w-5 h-5" />
                         </button>
                         <button type="submit" disabled={isSending || (!newMessage.trim() && selectedAttachments.length === 0)} className="w-11 h-11 bg-black text-white rounded-full flex items-center justify-center hover:bg-gray-800 disabled:opacity-30">
                             <HugeiconsIcon icon={SentIcon} className="w-5 h-5" />

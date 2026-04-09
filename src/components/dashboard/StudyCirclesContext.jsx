@@ -36,6 +36,7 @@ export const StudyCirclesProvider = ({ children }) => {
             .from("study_circle_members")
             .select(`
                 circle_id,
+                last_read_at,
                 study_circles (*)
             `)
             .eq("user_id", userId);
@@ -55,10 +56,15 @@ export const StudyCirclesProvider = ({ children }) => {
                 const circleInfo = Array.isArray(item.study_circles) ? item.study_circles[0] : item.study_circles;
                 if (!circleInfo) return null;
 
+                // Compute unread: has a message arrived after last_read_at?
+                const hasUnread = circleInfo.last_message_at && (
+                    !item.last_read_at || new Date(circleInfo.last_message_at) > new Date(item.last_read_at)
+                );
+
                 return {
                     ...circleInfo,
                     member_count: count || 0,
-                    unread: 0,
+                    unread: hasUnread ? 1 : 0,
                     last_message: circleInfo.last_message || "No messages yet",
                     timestamp: circleInfo.last_message_at
                         ? formatDate(circleInfo.last_message_at)
@@ -123,18 +129,61 @@ export const StudyCirclesProvider = ({ children }) => {
     }, [supabase, fetchMyCircles, fetchDiscoverCircles]);
 
     useEffect(() => {
+        let currentUserId = null;
+
         const fetchInitialData = async () => {
             const { data: { session } } = await supabase.auth.getSession();
-            if (session) loadUserData(session.user.id);
+            if (session) {
+                currentUserId = session.user.id;
+                loadUserData(session.user.id);
+            }
         };
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            if (session) loadUserData(session.user.id);
+            if (session) {
+                currentUserId = session.user.id;
+                loadUserData(session.user.id);
+            }
         });
 
         fetchInitialData();
-        return () => subscription.unsubscribe();
+
+        // Realtime: update sidebar last_message when new message arrives in any circle
+        const channel = supabase
+            .channel('study-circles-inbox')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'study_circle_messages' },
+                (payload) => {
+                    const { circle_id, content, attachment_url } = payload.new;
+                    setMyCircles(prev => {
+                        const updated = prev.map(c => {
+                            if (c.id !== circle_id) return c;
+                            return {
+                                ...c,
+                                last_message: content || (attachment_url ? 'Sent an attachment' : ''),
+                                last_message_at: payload.new.created_at,
+                                timestamp: formatDate(payload.new.created_at)
+                            };
+                        });
+                        // Re-sort by latest message
+                        return [...updated].sort((a, b) =>
+                            new Date(b.last_message_at || b.created_at) - new Date(a.last_message_at || a.created_at)
+                        );
+                    });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            subscription.unsubscribe();
+            supabase.removeChannel(channel);
+        };
     }, [supabase, loadUserData]);
+
+    const markCircleAsRead = useCallback((circleId) => {
+        setMyCircles(prev => prev.map(c => c.id === circleId ? { ...c, unread: 0 } : c));
+    }, []);
 
     const handleJoinCircle = async (circleId) => {
         if (!profile) return;
@@ -180,6 +229,7 @@ export const StudyCirclesProvider = ({ children }) => {
             fetchDiscoverCircles,
             handleJoinCircle,
             handleLeaveCircle,
+            markCircleAsRead,
             setMyCircles
         }}>
             {children}
