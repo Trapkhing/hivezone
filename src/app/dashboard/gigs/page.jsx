@@ -63,13 +63,12 @@ export default function GigsPage() {
 
                 if (session) {
                     setCurrentUserId(session.user.id);
-                    // Fetch user's institution
                     const { data: profileData } = await supabase
                         .from("users")
-                        .select("institution")
+                        .select("school_id")
                         .eq("id", session.user.id)
                         .single();
-                    userInstitution = profileData?.institution;
+                    userInstitution = profileData?.school_id;
                 }
 
                 if (!userInstitution) {
@@ -90,10 +89,10 @@ export default function GigsPage() {
                             programme,
                             year_of_study,
                             username,
-                            institution
+                            school_id
                         )
                     `)
-                    .eq('author.institution', userInstitution);
+                    .eq('school_id', userInstitution);
 
                 if (activeCategory !== "All Categories") {
                     const dbSlug = categoryMap[activeCategory];

@@ -70,6 +70,13 @@ export default function PostGigPage() {
                 return;
             }
 
+            // Fetch school_id for filtering
+            const { data: profileData } = await supabase
+                .from('users')
+                .select('school_id')
+                .eq('id', session.user.id)
+                .single();
+
             let imageUrl = null;
             if (selectedImage) {
                 const fileExt = selectedImage.name.split('.').pop();
@@ -109,7 +116,8 @@ export default function PostGigPage() {
                 tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ""),
                 expected_due_date: expectedDueDate || null,
                 image_url: imageUrl,
-                user_id: session.user.id
+                user_id: session.user.id,
+                school_id: profileData?.school_id
             };
 
             const { error: insertError } = await supabase

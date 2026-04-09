@@ -9,10 +9,6 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { validateDisplayName, validateStudentId, validatePhone, validateDateOfBirth } from "@/utils/validation";
 
-const INSTITUTIONS = [
-    "Knutsford University",
-];
-
 const GENDERS = ["Male", "Female", "Other"];
 
 const STUDY_YEARS = [
@@ -37,6 +33,8 @@ const OnboardingForm = () => {
     const emailFromUrl = searchParams.get("email");
 
     const [institution, setInstitution] = useState("");
+    const [schoolId, setSchoolId] = useState("");
+    const [schools, setSchools] = useState([]);
     const [programme, setProgramme] = useState("");
     const [gender, setGender] = useState("");
     const [yearOfStudy, setYearOfStudy] = useState("");
@@ -55,6 +53,15 @@ const OnboardingForm = () => {
     useEffect(() => {
         const checkStatus = async () => {
             const supabase = createClient();
+
+            // Fetch schools for dropdown
+            const { data: schoolsData } = await supabase
+                .from('schools')
+                .select('id, name')
+                .eq('is_active', true)
+                .order('name');
+            if (schoolsData) setSchools(schoolsData);
+
             const { data: { session } } = await supabase.auth.getSession();
             
             // 1. Not logged in?
@@ -191,8 +198,9 @@ const OnboardingForm = () => {
                 body: JSON.stringify({
                     userId: userIdToUpdate,
                     onboardingData: {
-                        institution,
-                        programme,
+                            institution,
+                            school_id: schoolId,
+                            programme,
                         student_id: studentId,
                         year_of_study: yearOfStudy,
                         gender,
@@ -361,10 +369,14 @@ const OnboardingForm = () => {
                     {/* Name of Institution */}
                     <CustomDropdown
                         label="Name Of Institution"
-                        options={INSTITUTIONS}
+                        options={schools.map(s => s.name)}
                         value={institution}
-                        onChange={setInstitution}
-                        placeholder="Knutsford University College"
+                        onChange={(name) => {
+                            setInstitution(name);
+                            const school = schools.find(s => s.name === name);
+                            setSchoolId(school?.id || '');
+                        }}
+                        placeholder="Select your university"
                     />
 
                     {/* Programme Of Study */}

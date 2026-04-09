@@ -95,7 +95,7 @@ export default function NotificationProvider({ children }) {
 
             // Subscribe with user-scoped filter so only this user's notifications fire
             channel = supabase
-                .channel('global-notifications')
+                .channel(`notifications-${session.user.id}`)
                 .on(
                     'postgres_changes',
                     { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${session.user.id}` },

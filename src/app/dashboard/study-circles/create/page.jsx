@@ -51,7 +51,7 @@ export default function CreateCirclePage() {
 
             const { data: profileData } = await supabase
                 .from("users")
-                .select("id")
+                .select("id, school_id")
                 .eq("id", session.user.id)
                 .single();
             setProfile(profileData);
@@ -113,7 +113,8 @@ export default function CreateCirclePage() {
                 created_by: profile.id,
                 is_private: formData.is_private,
                 invite_code: inviteCode,
-                avatar_url: avatarUrl
+                avatar_url: avatarUrl,
+                school_id: profile.school_id
             })
             .select()
             .single();

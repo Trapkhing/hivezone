@@ -28,7 +28,18 @@ export const FeedProvider = ({ children }) => {
         setHasMounted(true);
         const stored = getProfileFromDisk();
         if (stored) {
-            setPageProfileState(stored);
+            // Only use disk cache if it belongs to the current session
+            import('@/utils/supabase/client').then(({ createClient }) => {
+                const supabase = createClient();
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                    if (session?.user?.id && stored.id === session.user.id) {
+                        setPageProfileState(stored);
+                    } else if (session?.user?.id && stored.id !== session.user.id) {
+                        // Different user — clear stale disk cache
+                        localStorage.removeItem('HIVEZONE_USER_IDENTITY');
+                    }
+                });
+            });
         }
     }, []);
 

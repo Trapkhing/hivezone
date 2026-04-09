@@ -12,8 +12,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
-    // Server-side validation
-    const { display_name, student_id, contact, date_of_birth, institution, programme, year_of_study, gender } = onboardingData || {}
+    const { display_name, student_id, contact, date_of_birth, institution, school_id, programme, year_of_study, gender } = onboardingData || {}
 
     if (!institution || !programme || !gender || !year_of_study || !date_of_birth || !student_id || !contact || !display_name) {
       return NextResponse.json({ error: 'All fields are required.' }, { status: 400 })

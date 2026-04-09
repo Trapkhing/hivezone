@@ -41,7 +41,7 @@ function SearchResults() {
                 setCurrentUserId(session.user.id);
                 const { data: profileData } = await supabase
                     .from("users")
-                    .select("id, institution, display_name, first_name")
+                    .select("id, school_id, display_name, first_name")
                     .eq("id", session.user.id)
                     .single();
                 setProfile(profileData);
@@ -52,8 +52,8 @@ function SearchResults() {
 
     useEffect(() => {
         setLocalQuery(query);
-        if (query.trim() && profile?.institution) {
-            handleSearch(query.trim(), activeTab, profile.institution);
+        if (query.trim() && profile?.school_id) {
+            handleSearch(query.trim(), activeTab, profile.school_id);
         } else if (!query.trim()) {
             setResults([]);
         }
@@ -66,7 +66,7 @@ function SearchResults() {
             const { data, error } = await supabase
                 .from('public_users')
                 .select('id, display_name, username, profile_picture, is_verified, is_admin, bio')
-                .eq('institution', institution)
+                .eq('school_id', institution)
                 .or(`display_name.ilike.%${searchTerm}%,username.ilike.%${searchTerm}%`)
                 .limit(20);
 
@@ -84,9 +84,9 @@ function SearchResults() {
                 .from('gigs')
                 .select(`
                     *,
-                    author:users!inner(id, display_name, profile_picture, is_verified, is_admin, username, institution)
+                    author:users!inner(id, display_name, profile_picture, is_verified, is_admin, username, school_id)
                 `)
-                .eq('author.institution', institution)
+                .eq('school_id', institution)
                 .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
                 .limit(20);
 
@@ -100,11 +100,11 @@ function SearchResults() {
                 .from('feeds')
                 .select(`
                     *,
-                    author:users!inner(display_name, username, profile_picture, is_verified, is_admin, institution),
+                    author:users!inner(display_name, username, profile_picture, is_verified, is_admin, school_id),
                     likes:feed_likes(user_id),
                     comments:feed_comments(count)
                 `)
-                .eq('author.institution', institution)
+                .eq('school_id', institution)
                 .ilike('content', `%${searchTerm}%`)
                 .order('created_at', { ascending: false })
                 .limit(20);
@@ -309,7 +309,7 @@ function SearchResults() {
 
                 {/* Results List */}
                 <PullToRefresh 
-                    onRefresh={() => handleSearch(localQuery.trim() || query.trim(), activeTab, profile?.institution, true)}
+                    onRefresh={() => handleSearch(localQuery.trim() || query.trim(), activeTab, profile?.school_id, true)}
                     className="flex-1"
                 >
                     <div className="flex flex-col gap-4 min-h-[50vh]">

@@ -92,8 +92,16 @@ export const StudyCirclesProvider = ({ children }) => {
 
         const joinedIdList = joinedIds?.map(j => j.circle_id) || [];
 
+        // Get user's school_id
+        const { data: userData } = await supabase
+            .from("users")
+            .select("school_id")
+            .eq("id", userId)
+            .single();
+
         let query = supabase.from("study_circles").select("*")
-            .eq("is_private", false);
+            .eq("is_private", false)
+            .eq("school_id", userData?.school_id);
 
         if (joinedIdList.length > 0) {
             query = query.not("id", "in", `(${joinedIdList.join(",")})`);

@@ -21,14 +21,14 @@ export default function DashboardPage() {
 
     // High-performance cached profile fetch
     const { data: profile } = useQuery({
-        queryKey: ['USER_IDENTITY_V3'],
+        queryKey: ['USER_IDENTITY_V4'],
         queryFn: async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) { router.push("/auth/signin"); return null; }
             
             const { data: profileData } = await supabase
                 .from("users")
-                .select("id, first_name, email, institution, profile_picture")
+                .select("id, first_name, email, institution, school_id, profile_picture")
                 .eq("id", session.user.id)
                 .single();
             

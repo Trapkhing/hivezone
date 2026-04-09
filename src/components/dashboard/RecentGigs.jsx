@@ -21,10 +21,10 @@ const RecentGigs = () => {
                 if (session) {
                     const { data: profileData } = await supabase
                         .from("users")
-                        .select("institution")
+                        .select("school_id")
                         .eq("id", session.user.id)
                         .single();
-                    userInstitution = profileData?.institution;
+                    userInstitution = profileData?.school_id;
                 }
 
                 if (!userInstitution) {
@@ -45,10 +45,10 @@ const RecentGigs = () => {
                             programme,
                             year_of_study,
                             username,
-                            institution
+                            school_id
                         )
                     `)
-                    .eq('author.institution', userInstitution)
+                    .eq('school_id', userInstitution)
                     .order('created_at', { ascending: false })
                     .limit(2);
 

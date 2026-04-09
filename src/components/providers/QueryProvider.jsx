@@ -2,7 +2,7 @@
 
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { get, set, del } from "idb-keyval";
+import { get, set, del, keys } from "idb-keyval";
 
 /**
  * Global Query Client for HiveZone.
@@ -77,4 +77,19 @@ export const getProfileFromDisk = () => {
     } catch (e) {
         return null;
     }
+};
+
+// Call this on sign-out or user switch to prevent stale data leaking
+export const clearAllUserCache = async () => {
+    if (typeof window === "undefined") return;
+    // Clear identity disk cache
+    localStorage.removeItem("HIVEZONE_USER_IDENTITY");
+    // Clear IndexedDB query cache
+    await del("HIVEZONE_V1_CACHE");
+    // Clear chat storage
+    const allKeys = await keys();
+    const chatKeys = allKeys.filter(k => typeof k === 'string' && (k.startsWith('HZ_MSGS_') || k === 'HZ_CONVS_v1'));
+    await Promise.all(chatKeys.map(k => del(k)));
+    // Clear TanStack Query in-memory cache
+    queryClient.clear();
 };
