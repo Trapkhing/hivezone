@@ -31,33 +31,7 @@ import UserBadge from "@/components/ui/UserBadge";
 import { compressForChat } from "@/utils/compressImage";
 import AutoPauseVideo from "@/components/ui/AutoPauseVideo";
 import { getMessagesFromDisk } from "@/utils/chatStorage";
-
-const downloadFile = async (url, fallbackName = 'attachment') => {
-    try {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        const blobUrl = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-
-        let filename = fallbackName;
-        try {
-            const urlObj = new URL(url);
-            const pathParts = urlObj.pathname.split('/');
-            const lastPart = pathParts[pathParts.length - 1];
-            if (lastPart) filename = decodeURIComponent(lastPart);
-        } catch (e) { }
-
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(blobUrl);
-    } catch (error) {
-        console.error('Download failed:', error);
-        window.open(url, '_blank', 'noopener,noreferrer');
-    }
-};
+import { downloadOrShareFile } from "@/utils/fileDownload";
 
 export default function ChatWindowPage() {
     const { id } = useParams();
@@ -423,8 +397,8 @@ export default function ChatWindowPage() {
             const uploadPromises = msgAttachmentFiles.map(async (file, index) => {
                 // Compress images before upload (PDFs, docs, etc. pass through)
                 const fileToUpload = await compressForChat(file);
-                const fileExt = fileToUpload.name.split('.').pop();
-                const fileName = `chat-attachments/${currentUser.id}-${Date.now()}-${index}.${fileExt}`;
+                const originalName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                const fileName = `chat-attachments/${Date.now()}--${originalName}`;
 
                 // 1. Get presigned URL from our API
                 const response = await fetch("/api/upload", {
@@ -771,11 +745,11 @@ export default function ChatWindowPage() {
                                                             {hasDocs && (
                                                                 <div className="px-3 pt-2 flex flex-col gap-1">
                                                                     {docs.map((url, i) => (
-                                                                        <div key={i} onClick={() => downloadFile(url, `attachment-${msg.id}-${i}`)} className={`flex items-center justify-between gap-3 p-3 rounded-xl border cursor-pointer hover:opacity-90 transition-opacity ${isMe ? 'bg-black/5 border-black/10 text-black' : 'bg-gray-50 border-gray-100 text-gray-800'}`}>
+                                                                        <div key={i} onClick={() => downloadOrShareFile(url, `attachment-${msg.id}-${i}`)} className={`flex items-center justify-between gap-3 p-3 rounded-xl border cursor-pointer hover:opacity-90 transition-opacity ${isMe ? 'bg-black/5 border-black/10 text-black' : 'bg-gray-50 border-gray-100 text-gray-800'}`}>
                                                                             <div className="flex items-center gap-3 overflow-hidden">
                                                                                 <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${isMe ? 'bg-white/40' : 'bg-white shadow-sm'}`}><HugeiconsIcon icon={Attachment01Icon} className="w-5 h-5 opacity-70" /></div>
                                                                                 <div className="flex flex-col overflow-hidden">
-                                                                                    <span className="text-sm font-bold truncate max-w-[150px]">{(() => { try { const urlObj = new URL(url); const pathParts = urlObj.pathname.split('/'); return decodeURIComponent(pathParts[pathParts.length - 1]).replace(/^[^-]+-\d+\./, '') || 'Document'; } catch (e) { return 'Document'; } })()}</span>
+                                                                                    <span className="text-sm font-bold truncate max-w-[150px]">{(() => { try { const urlObj = new URL(url); const pathParts = urlObj.pathname.split('/'); const raw = decodeURIComponent(pathParts[pathParts.length - 1]); const clean = raw.includes('--') ? raw.split('--').slice(1).join('--') : raw; const isUUID = /^[0-9a-f-]{36}$/i.test(clean); return (clean && !isUUID) ? clean : 'Document'; } catch (e) { return 'Document'; } })()}</span>
                                                                                     <span className="text-[10px] opacity-60 uppercase">{url.split('.').pop()?.split('?')[0] || 'FILE'}</span>
                                                                                 </div>
                                                                             </div>
