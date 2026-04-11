@@ -404,6 +404,8 @@ function GigDetailContent() {
 
                 </div>
             </div>
+            {/* Spacer to clear Bottom Nav */}
+            <div className="h-32 md:h-8 w-full shrink-0" />
         </div>
     );
 }

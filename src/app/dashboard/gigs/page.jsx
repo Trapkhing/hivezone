@@ -400,7 +400,7 @@ export default function GigsPage() {
             {isMobileFilterOpen && (
                 <div className="fixed inset-0 z-50 flex items-end sm:hidden bg-black/40 backdrop-blur-sm transition-opacity">
                     <div
-                        className="bg-white w-full rounded-t-[2rem] p-6 pb-12 flex flex-col gap-6 animate-slide-up"
+                        className="bg-white w-full rounded-t-[2rem] p-6 pb-24 flex flex-col gap-6 animate-slide-up"
                     >
                         <div className="flex items-center justify-between mb-2">
                             <h3 className="text-2xl font-black font-newyork text-gray-900">Filters</h3>
@@ -439,7 +439,7 @@ export default function GigsPage() {
             )}
 
             {/* Spacer to clear Bottom Nav */}
-            <div className="h-32 w-full shrink-0"></div>
+            <div className="h-32 w-full shrink-0 md:h-8"></div>
         </div>
     );
 }
